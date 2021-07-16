@@ -11,7 +11,6 @@ using FluentAssertions;
 using GitCommands;
 using GitCommands.Git;
 using GitCommands.Git.Commands;
-using GitCommands.Utils;
 using GitExtUtils;
 using GitUI;
 using GitUIPluginInterfaces;
@@ -119,66 +118,48 @@ namespace GitCommandsTests
             Assert.AreSame(s, GitModule.UnescapeOctalCodePoints(s));
         }
 
-        [TestCase(null, null)]
-        [TestCase("", "")]
-        [TestCase(" ", " ")]
-        [TestCase("Hello, World!", "Hello, World!")]
-        [TestCase("두다.txt", @"\353\221\220\353\213\244.txt")] // escaped octal code points (Korean Hangul in this case)
-        [TestCase(@"Привет, World!", @"\320\237\321\200\320\270\320\262\320\265\321\202, World!")] // escaped and not escaped in the same string
-        public void EscapeOctalCodePoints_handles_text(string input, string expected)
-        {
-            Assert.AreEqual(expected, GitModule.EscapeOctalCodePoints(input));
-        }
-
-        [TestCase("Hello, World!")]
-        [TestCase("두다.txt")]
-        public void UnescapeOctalCodePoints_reverses_EscapeOctalCodePoints(string input)
-        {
-            Assert.AreEqual(input, GitModule.UnescapeOctalCodePoints(GitModule.EscapeOctalCodePoints(input)));
-        }
-
         [Test]
         public void FetchCmd()
         {
             // TODO test case where this is false
             Assert.IsTrue(GitVersion.Current.FetchCanAskForProgress);
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/remotebranch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null))
             {
                 Assert.AreEqual(
                     "fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags",
                     _gitModule.FetchCmd("remote", "remotebranch", "localbranch").Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/remotebranch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null))
             {
                 Assert.AreEqual(
                     "fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --tags",
                     _gitModule.FetchCmd("remote", "remotebranch", "localbranch", true).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/remotebranch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null))
             {
                 Assert.AreEqual(
                     "fetch --progress \"remote\" +remotebranch:refs/heads/localbranch",
                     _gitModule.FetchCmd("remote", "remotebranch", "localbranch", null).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/remotebranch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null))
             {
                 Assert.AreEqual(
                     "fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --unshallow",
                     _gitModule.FetchCmd("remote", "remotebranch", "localbranch", isUnshallow: true).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/remotebranch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null))
             {
                 Assert.AreEqual(
                     "fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --prune",
                     _gitModule.FetchCmd("remote", "remotebranch", "localbranch", pruneRemoteBranches: true).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/remotebranch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/remotebranch~0\"", null))
             {
                 Assert.AreEqual(
                     "fetch --progress \"remote\" +remotebranch:refs/heads/localbranch --no-tags --prune --prune-tags",
@@ -215,49 +196,49 @@ namespace GitCommandsTests
         [Test]
         public void PushCmd()
         {
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push --progress \"remote\" from-branch",
                     _gitModule.PushCmd("remote", "from-branch", null, ForcePushOptions.DoNotForce, track: false, recursiveSubmodules: 0).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push --progress \"remote\" from-branch:refs/heads/to-branch",
                     _gitModule.PushCmd("remote", "from-branch", "to-branch", ForcePushOptions.DoNotForce, track: false, recursiveSubmodules: 0).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push -f --progress \"remote\" from-branch:refs/heads/to-branch",
                     _gitModule.PushCmd("remote", "from-branch", "to-branch", ForcePushOptions.Force, track: false, recursiveSubmodules: 0).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push --force-with-lease --progress \"remote\" from-branch:refs/heads/to-branch",
                     _gitModule.PushCmd("remote", "from-branch", "to-branch", ForcePushOptions.ForceWithLease, track: false, recursiveSubmodules: 0).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push -u --progress \"remote\" from-branch:refs/heads/to-branch",
                     _gitModule.PushCmd("remote", "from-branch", "to-branch", ForcePushOptions.DoNotForce, track: true, recursiveSubmodules: 0).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push --recurse-submodules=check --progress \"remote\" from-branch:refs/heads/to-branch",
                     _gitModule.PushCmd("remote", "from-branch", "to-branch", ForcePushOptions.DoNotForce, track: false, recursiveSubmodules: 1).Arguments);
             }
 
-            using (_executable.StageOutput("rev-parse \"refs/heads/from-branch~0\"", null))
+            using (_executable.StageOutput("rev-parse --quiet --verify \"refs/heads/from-branch~0\"", null))
             {
                 Assert.AreEqual(
                     "push --recurse-submodules=on-demand --progress \"remote\" from-branch:refs/heads/to-branch",
@@ -400,14 +381,14 @@ namespace GitCommandsTests
         [Test]
         public void RevParse_should_return_null_if_revisionExpression_exceeds_260_symbols()
         {
-            var revisionExpression = new string('a', 261);
+            string revisionExpression = new('a', 261);
             _gitModule.RevParse(revisionExpression).Should().BeNull();
         }
 
         [Test]
         public void RevParse_should_return_ObjectId_if_revisionExpression_is_valid_hash()
         {
-            var revisionExpression = new string('1', ObjectId.Sha1CharCount);
+            string revisionExpression = new('1', ObjectId.Sha1CharCount);
             _gitModule.RevParse(revisionExpression).Should().Be(ObjectId.WorkTreeId);
         }
 
@@ -415,7 +396,7 @@ namespace GitCommandsTests
         public void RevParse_should_query_git_and_return_ObjectId_if_get_valid_hash()
         {
             var revisionExpression = "11111";
-            using (_executable.StageOutput($"rev-parse \"{revisionExpression}~0\"", new string('1', ObjectId.Sha1CharCount), 0))
+            using (_executable.StageOutput($"rev-parse --quiet --verify \"{revisionExpression}~0\"", new string('1', ObjectId.Sha1CharCount), 0))
             {
                 _gitModule.RevParse(revisionExpression).Should().Be(ObjectId.WorkTreeId);
             }
@@ -425,7 +406,7 @@ namespace GitCommandsTests
         public void RevParse_should_query_git_and_return_null_if_invalid_response()
         {
             var revisionExpression = "11111";
-            using (_executable.StageOutput($"rev-parse \"{revisionExpression}~0\"", "foo bar", 0))
+            using (_executable.StageOutput($"rev-parse --quiet --verify \"{revisionExpression}~0\"", "foo bar", 0))
             {
                 _gitModule.RevParse(revisionExpression).Should().BeNull();
             }
@@ -466,10 +447,10 @@ namespace GitCommandsTests
         public void GetDiffChangedFilesFromString(string testName, StagedStatus stagedStatus, string statusString)
         {
             // TODO produce a valid working directory
-            var module = new GitModule(Path.GetTempPath());
+            GitModule module = new(Path.GetTempPath());
             using (ApprovalResults.ForScenario(testName.Replace(' ', '_')))
             {
-                // git diff -M -C -z --name-status
+                // git diff --find-renames --find-copies -z --name-status
                 var statuses = module.GetTestAccessor().GetDiffChangedFilesFromString(statusString, stagedStatus);
                 Approvals.VerifyJson(JsonConvert.SerializeObject(statuses));
             }
@@ -621,7 +602,7 @@ namespace GitCommandsTests
         [Test]
         public void GetParents_calls_correct_command_and_parses_response()
         {
-            var args = new GitArgumentBuilder("log")
+            GitArgumentBuilder args = new("log")
             {
                 "-n 1",
                 "--format=format:%P",
@@ -741,23 +722,10 @@ namespace GitCommandsTests
             Assert.AreEqual(status, stagedStatus);
         }
 
-        [TestCase("'git difftool --tool=<tool>' may be set to one of the following:\n\t\tvimdiff\n\t\tvimdiff2\n\t\tvimdiff3\n\t\twinmerge\n\n\tuser-defined:\n\t\tDiffMerge.cmd \"C:/Program Files/SourceGear/Common/DiffMerge/sgdm.exe\" -merge -result=\"$MERGED\" \"$LOCAL\" \"$BASE\" \"$REMOTE\"\n\t\tdiffmerge.cmd \"C:/Program Files/SourceGear/Common/DiffMerge/sgdm.exe\" \"$LOCAL\" \"$REMOTE\"\n\t\tkdiff3.cmd \"C:/Program Files/KDiff3/kdiff3.exe\" \"$LOCAL\" \"$REMOTE\"\n\t\tmeld.cmd \"C:/Program Files (x86)/Meld/meld.exe\" \"$LOCAL\" \"$BASE\" \"$REMOTE\" --output \"$MERGED\"\n\t\tmeld.cmd \"C:/Program Files (x86)/Meld/meld.exe\" \"$LOCAL\" \"$REMOTE\"\n\t\tp4merge.cmd \"C:/Program Files/Perforce/p4merge.exe\" \"$BASE\" \"$LOCAL\" \"$REMOTE\" \"$MERGED\"\n\t\tp4merge.cmd \"C:/Program Files/Perforce/p4merge.exe\" \"$LOCAL\" \"$REMOTE\"\n\t\tsemanticdiff.cmd \"C:/Users/ejgo/AppData/Local/semanticmerge/semanticmergetool.exe\" -s \"$LOCAL\" -d \"$REMOTE\"\n\t\tsemanticmerge.cmd \"C:/Users/ejgo/AppData/Local/semanticmerge/semanticmergetool.exe\" -s \"$LOCAL\" -d \"$REMOTE\"\n\t\tsemanticmerge.cmd \"C:/Users/ejgo/AppData/Local/semanticmerge/semanticmergetool.exe\" -s \"$REMOTE\" -d \"$LOCAL\" -b \"$BASE\" -r \"$MERGED\"\n\t\tsourcetree.cmd 'C:/Program Files/TortoiseGit/bin/TortoiseGitMerge.exe'  -base:\"$BASE\" -mine:\"$LOCAL\" -theirs:\"$REMOTE\" -merged:\"$MERGED\"\n\t\tsourcetree.cmd 'C:/Program Files/TortoiseGit/bin/TortoiseGitMerge.exe' \"$LOCAL\" \"$REMOTE\"\n\t\tssss.cmd ggfjf dhdf df\n\t\ttortoisemerge.cmd \"C:/Program Files/TortoiseGit/bin/TortoiseGitMerge.exe\" -base:\"$BASE\" -mine:\"$LOCAL\"\n\t\ttortoisemerge.cmd \"C:/Program Files/TortoiseGit/bin/TortoiseGitMerge.exe\" -base:\"$BASE\" -mine:\"$LOCAL\" -theirs:\"$REMOTE\" -merged:\"$MERGED\"\n\t\ttortoisemerge2.cmd \"C:/Program Files/TortoiseGit/bin/TortoiseGitMerge.exe\" \"$LOCAL\" \"$REMOTE\"\n\t\tvsdiffmerge.cmd \"F:/Program Files (x86)/Microsoft Visual Studio/2017/Community/Common7/IDE/CommonExtensions/Microsoft/TeamFoundation/Team Explorer/vsDiffMerge.exe\" \"$LOCAL\" \"$REMOTE\"\n\t\twinmerge.cmd \"C:/Program Files/WinMerge/winmergeu.exe\" -e -u  -wl -wr -fm -dl \"Mine: $LOCAL\" -dm \"Merged: $BASE\" -dr \"Theirs: $REMOTE\" \"$LOCAL\" \"$BASE\" \"$REMOTE\" -o \"$MERGED\"\n\t\twinmerge.cmd \"C:/Program Files/WinMerge/winmergeu.exe\" -e -u \"$LOCAL\" \"$REMOTE\"\n\nThe following tools are valid, but not currently available:\n\t\taraxis\n\t\tbc\n\t\tbc3\n\t\tcodecompare\n\t\tdeltawalker\n\t\tdiffmerge\n\t\tdiffuse\n\t\tecmerge\n\t\temerge\n\t\texamdiff\n\t\tguiffy\n\t\tgvimdiff\n\t\tgvimdiff2\n\t\tgvimdiff3\n\t\tkdiff3\n\t\tkompare\n\t\tmeld\n\t\topendiff\n\t\tp4merge\n\t\tsmerge\n\t\ttkdiff\n\t\txxdiff\n\nSome of the tools listed above only work in a windowed\nenvironment. If run in a terminal-only session, they will fail.\n",
-            new[] { "diffmerge", "DiffMerge", "kdiff3", "meld", "p4merge", "semanticdiff", "semanticmerge", "sourcetree", "ssss", "tortoisemerge", "tortoisemerge2", "winmerge", "vsdiffmerge" })]
-        [TestCase("'git difftool --tool=<tool>' may be set to one of the following:\n\t\tvimdiff\n\t\tvimdiff2\n\t\tvimdiff3\n\t\twinmerge\n\nThe following tools are valid, but not currently available:\n\t\taraxis\n\t\tbc\n\t\tbc3\n\t\tcodecompare\n\t\tdeltawalker\n\t\tdiffmerge\n\t\tdiffuse\n\t\tecmerge\n\t\temerge\n\t\texamdiff\n\t\tguiffy\n\t\tgvimdiff\n\t\tgvimdiff2\n\t\tgvimdiff3\n\t\tkdiff3\n\t\tkompare\n\t\tmeld\n\t\topendiff\n\t\tp4merge\n\t\tsmerge\n\t\ttkdiff\n\t\txxdiff\n\nSome of the tools listed above only work in a windowed\nenvironment. If run in a terminal-only session, they will fail.\n",
-            new[] { "winmerge" })]
-        [TestCase("'git difftool --tool=<tool>' may be set to one of the following:\n\t\tvimdiff\n\t\tvimdiff2\n\t\tvimdiff3\n\t\twinmerge\n",
-            new[] { "winmerge" })]
-        public void ParseCustomDiffMergeToolTest(string output, string[] expected)
-        {
-            IEnumerable<string> tools = _gitModule.GetTestAccessor().ParseCustomDiffMergeTool(output);
-
-            tools.Should().BeEquivalentTo(expected);
-        }
-
         [Test]
         public void GetSubmodulesLocalPaths()
         {
-            var moduleTestHelpers = new List<CommonTestUtils.GitModuleTestHelper>();
+            List<CommonTestUtils.GitModuleTestHelper> moduleTestHelpers = new();
             try
             {
                 const int numModules = 4;
@@ -807,29 +775,28 @@ namespace GitCommandsTests
         public void GetSuperprojectCurrentCheckout()
         {
             // Create super and sub repo
-            using (CommonTestUtils.GitModuleTestHelper moduleTestHelperSuper = new CommonTestUtils.GitModuleTestHelper("super repo"),
-                                                       moduleTestHelperSub = new CommonTestUtils.GitModuleTestHelper("sub repo"))
+            using CommonTestUtils.GitModuleTestHelper moduleTestHelperSuper = new("super repo"),
+                                                       moduleTestHelperSub = new("sub repo");
+
+            // Add and init the submodule
+            moduleTestHelperSuper.AddSubmodule(moduleTestHelperSub, "sub repo");
+            var moduleSub = moduleTestHelperSuper.GetSubmodulesRecursive().ElementAt(0);
+
+            // Commit in submodule
+            moduleSub.GitExecutable.GetOutput(@"commit --allow-empty -am ""First commit""");
+            string commitRef = moduleSub.GitExecutable.GetOutput("show HEAD").LazySplit('\n').First().LazySplit(' ').Skip(1).First();
+
+            // Update ref in superproject
+            moduleTestHelperSuper.Module.GitExecutable.GetOutput(@"add ""sub repo""");
+            moduleTestHelperSuper.Module.GitExecutable.GetOutput(@"commit -am ""Update submodule ref""");
+
+            // Assert
+            ThreadHelper.JoinableTaskFactory.Run(async () =>
             {
-                // Add and init the submodule
-                moduleTestHelperSuper.AddSubmodule(moduleTestHelperSub, "sub repo");
-                var moduleSub = moduleTestHelperSuper.GetSubmodulesRecursive().ElementAt(0);
-
-                // Commit in submodule
-                moduleSub.GitExecutable.GetOutput(@"commit --allow-empty -am ""First commit""");
-                string commitRef = moduleSub.GitExecutable.GetOutput("show HEAD").Split('\n')[0].Split(' ')[1];
-
-                // Update ref in superproject
-                moduleTestHelperSuper.Module.GitExecutable.GetOutput(@"add ""sub repo""");
-                moduleTestHelperSuper.Module.GitExecutable.GetOutput(@"commit -am ""Update submodule ref""");
-
-                // Assert
-                ThreadHelper.JoinableTaskFactory.Run(async () =>
-                {
-                    (char code, ObjectId commitId) = await moduleSub.GetSuperprojectCurrentCheckoutAsync();
-                    Assert.AreEqual(32, code);
-                    Assert.AreEqual(commitRef, commitId.ToString());
-                });
-            }
+                (char code, ObjectId commitId) = await moduleSub.GetSuperprojectCurrentCheckoutAsync();
+                Assert.AreEqual(32, code);
+                Assert.AreEqual(commitRef, commitId.ToString());
+            });
         }
 
         [TestCase(false, @"stash list")]
@@ -854,8 +821,8 @@ namespace GitCommandsTests
         [TestCase(new object[] { "123", "567", "output.file", 2 })]
         public void Test_FormatPatch(string from, string to, string outputFile, int? start)
         {
-            var arguments = new StringBuilder();
-            arguments.Append("format-patch -M -C -B");
+            StringBuilder arguments = new();
+            arguments.Append("format-patch --find-renames --find-copies --break-rewrites");
             if (start is not null)
             {
                 arguments.AppendFormat(" --start-number {0}", start);
@@ -874,8 +841,8 @@ namespace GitCommandsTests
         [TestCase(new object[] { null, "567", "output.file", 2 })]
         public void Test_FormatPatchInRoot(string from, string to, string outputFile, int? start)
         {
-            var arguments = new StringBuilder();
-            arguments.Append("format-patch -M -C -B");
+            StringBuilder arguments = new();
+            arguments.Append("format-patch --find-renames --find-copies --break-rewrites");
             if (start is not null)
             {
                 arguments.AppendFormat(" --start-number {0}", start);
@@ -900,28 +867,24 @@ namespace GitCommandsTests
         public void ResetFiles_should_work_as_expected(string[] files, string args)
         {
             // Real GitModule is need to access AppSettings.GitCommand static property, avoid exception with dummy GitModule
-            using (var moduleTestHelper = new GitModuleTestHelper())
-            {
-                var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
-                string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
-                _executable.StageOutput(args, dummyCommandOutput);
-                var result = gitModule.ResetFiles(files.ToList());
-                Assert.AreEqual(dummyCommandOutput, result);
-            }
+            using GitModuleTestHelper moduleTestHelper = new();
+            var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
+            string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
+            _executable.StageOutput(args, dummyCommandOutput);
+            var result = gitModule.ResetFiles(files.ToList());
+            Assert.AreEqual(dummyCommandOutput, result);
         }
 
         [TestCase(new string[] { "abc", "def" }, "rm -- \"abc\" \"def\"")]
         public void RemoveFiles_shouldWorkAsExpected(string[] files, string args)
         {
             // Real GitModule is need to access AppSettings.GitCommand static property, avoid exception with dummy GitModule
-            using (var moduleTestHelper = new GitModuleTestHelper())
-            {
-                var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
-                string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
-                _executable.StageOutput(args, dummyCommandOutput);
-                var result = gitModule.RemoveFiles(files.ToList(), false);
-                Assert.AreEqual(dummyCommandOutput, result);
-            }
+            using GitModuleTestHelper moduleTestHelper = new();
+            var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
+            string dummyCommandOutput = "The answer is 42. Just check that the Git arguments are as expected.";
+            _executable.StageOutput(args, dummyCommandOutput);
+            var result = gitModule.RemoveFiles(files.ToList(), false);
+            Assert.AreEqual(dummyCommandOutput, result);
         }
 
         [TestCase(new string[] { }, "")]
@@ -934,47 +897,51 @@ namespace GitCommandsTests
         public void BatchUnstageFiles_should_work_as_expected(GitItemStatus[] files, string[] args, bool expectedResult)
         {
             // Real GitModule is need to access AppSettings.GitCommand static property, avoid exception with dummy GitModule
-            using (var moduleTestHelper = new GitModuleTestHelper())
+            using GitModuleTestHelper moduleTestHelper = new();
+            var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
+
+            foreach (var arg in args)
             {
-                var gitModule = GetGitModuleWithExecutable(_executable, module: moduleTestHelper.Module);
-
-                foreach (var arg in args)
-                {
-                    _executable.StageCommand(arg);
-                }
-
-                var result = gitModule.BatchUnstageFiles(files);
-                Assert.AreEqual(expectedResult, result);
+                _executable.StageCommand(arg);
             }
+
+            var result = gitModule.BatchUnstageFiles(files);
+            Assert.AreEqual(expectedResult, result);
         }
 
-        private static TestCaseData[] BatchUnstageFilesTestCases { get; set; } =
+        private static IEnumerable<TestCaseData> BatchUnstageFilesTestCases
         {
-            new TestCaseData(new GitItemStatus[]
+            get
             {
-                new GitItemStatus { Name = "abc2", IsNew = true },
-                new GitItemStatus { Name = "abc2", IsNew = true, IsDeleted = true },
-                new GitItemStatus { Name = "abc2", IsNew = false },
-                new GitItemStatus { Name = "abc3", IsNew = false, IsRenamed = true, OldName = "def" }
-            },
-            new string[]
-            {
-                "reset \"HEAD\" -- \"abc2\" \"abc3\" \"def\"",
-                "update-index --info-only --index-info",
-                "update-index --force-remove --stdin"
-            },
-            false),
-            new TestCaseData(new GitItemStatus[]
-            {
-                new GitItemStatus { Name = "abc2", IsNew = false },
-                new GitItemStatus { Name = "abc3", IsNew = false, IsDeleted = true }
-            },
-            new string[]
-            {
-                "reset \"HEAD\" -- \"abc2\" \"abc3\"",
-            },
-            true)
-        };
+                yield return new TestCaseData(
+                    new GitItemStatus[]
+                    {
+                        new GitItemStatus("abc2") { IsNew = true },
+                        new GitItemStatus("abc2") { IsNew = true, IsDeleted = true },
+                        new GitItemStatus("abc2") { IsNew = false },
+                        new GitItemStatus("abc3") { IsNew = false, IsRenamed = true, OldName = "def" }
+                    },
+                    new string[]
+                    {
+                        "reset \"HEAD\" -- \"abc2\" \"abc3\" \"def\"",
+                        "reset -- \"abc2\"",
+                        "update-index --force-remove --stdin"
+                    },
+                    false);
+
+                yield return new TestCaseData(
+                    new GitItemStatus[]
+                    {
+                        new GitItemStatus("abc2") { IsNew = false },
+                        new GitItemStatus("abc3") { IsNew = false, IsDeleted = true }
+                    },
+                    new string[]
+                    {
+                        "reset \"HEAD\" -- \"abc2\" \"abc3\"",
+                    },
+                    true);
+            }
+        }
 
         /// <summary>
         /// Create a GitModule with mockable GitExecutable
@@ -984,14 +951,11 @@ namespace GitCommandsTests
         /// <returns>The GitModule</returns>
         private GitModule GetGitModuleWithExecutable(IExecutable executable, string path = "", GitModule module = null)
         {
-            if (module is null)
-            {
-                module = new GitModule(path);
-            }
+            module ??= new GitModule(path);
 
             typeof(GitModule).GetField("_gitExecutable", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(module, executable);
-            var cmdRunner = new GitCommandRunner(executable, () => GitModule.SystemEncoding);
+            GitCommandRunner cmdRunner = new(executable, () => GitModule.SystemEncoding);
             typeof(GitModule).GetField("_gitCommandRunner", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(module, cmdRunner);
 

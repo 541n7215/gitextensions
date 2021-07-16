@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 
 namespace ResourceManager
 {
@@ -11,25 +11,21 @@ namespace ResourceManager
     {
         void Clear();
 
-        string CreateLink(string caption, string uri);
+        string CreateLink(string? caption, string uri);
 
         string CreateTagLink(string tag);
 
         string CreateBranchLink(string noPrefixBranch);
 
-        string CreateCommitLink(ObjectId objectId, string linkText = null, bool preserveGuidInLinkText = false);
+        string CreateCommitLink(ObjectId objectId, string? linkText = null, bool preserveGuidInLinkText = false);
 
         string CreateShowAllLink(string what);
 
-        void ExecuteLink(string linkText, Action<CommandEventArgs> handleInternalLink = null, Action<string> showAll = null);
+        void ExecuteLink(string linkText, Action<CommandEventArgs>? handleInternalLink = null, Action<string?>? showAll = null);
 
-        [ContractAnnotation("=>false,commandEventArgs:null")]
-        [ContractAnnotation("=>true,commandEventArgs:notnull")]
-        bool ParseInternalScheme(Uri uri, out CommandEventArgs commandEventArgs);
+        bool ParseInternalScheme(Uri uri, [NotNullWhen(returnValue: true)] out CommandEventArgs? commandEventArgs);
 
-        [ContractAnnotation("=>false,uri:null")]
-        [ContractAnnotation("=>true,uri:notnull")]
-        bool ParseLink(string linkText, out Uri uri);
+        bool ParseLink(string linkText, [NotNullWhen(returnValue: true)] out Uri? uri);
     }
 
     public sealed class LinkFactory : ILinkFactory
@@ -37,22 +33,22 @@ namespace ResourceManager
         private const string InternalScheme = "gitext";
         private const string ShowAll = "showall";
 
-        private readonly ConcurrentDictionary<string, string> _linksMap = new ConcurrentDictionary<string, string>();
+        private readonly ConcurrentDictionary<string, string> _linksMap = new();
 
         public void Clear()
         {
             _linksMap.Clear();
         }
 
-        public string CreateLink(string caption, string uri)
+        public string CreateLink(string? caption, string uri)
         {
             return AddLink(caption, uri);
         }
 
-        private string AddLink(string caption, string uri)
+        private string AddLink(string? caption, string uri)
         {
             string htmlUri = WebUtility.HtmlEncode(uri);
-            string rtfLinkText = caption + "#" + htmlUri;
+            string rtfLinkText = caption;
             _linksMap[rtfLinkText] = htmlUri;
 
             string htmlLink = "<a href=" + htmlUri.Quote("'") + ">" + WebUtility.HtmlEncode(caption) + "</a>";
@@ -79,17 +75,17 @@ namespace ResourceManager
             return WebUtility.HtmlEncode(noPrefixBranch);
         }
 
-        public string CreateCommitLink(ObjectId objectId, string linkText = null, bool preserveGuidInLinkText = false)
+        public string CreateCommitLink(ObjectId objectId, string? linkText = null, bool preserveGuidInLinkText = false)
         {
             if (linkText is null)
             {
                 if (objectId == ObjectId.WorkTreeId)
                 {
-                    linkText = ResourceManager.Strings.Workspace;
+                    linkText = TranslatedStrings.Workspace;
                 }
                 else if (objectId == ObjectId.IndexId)
                 {
-                    linkText = ResourceManager.Strings.Index;
+                    linkText = TranslatedStrings.Index;
                 }
                 else if (preserveGuidInLinkText)
                 {
@@ -105,9 +101,9 @@ namespace ResourceManager
         }
 
         public string CreateShowAllLink(string what)
-            => AddLink($"[ {Strings.ShowAll} ]", $"{InternalScheme}://{ShowAll}/{what}");
+            => AddLink($"[ {TranslatedStrings.ShowAll} ]", $"{InternalScheme}://{ShowAll}/{what}");
 
-        public void ExecuteLink(string linkText, Action<CommandEventArgs> handleInternalLink = null, Action<string> showAll = null)
+        public void ExecuteLink(string linkText, Action<CommandEventArgs>? handleInternalLink = null, Action<string?>? showAll = null)
         {
             if (!ParseLink(linkText, out var uri))
             {
@@ -136,15 +132,15 @@ namespace ResourceManager
                 return;
             }
 
-            using var process = new Process
+            using Process process = new()
             {
                 EnableRaisingEvents = false,
-                StartInfo = { FileName = uri.AbsoluteUri }
+                StartInfo = { FileName = uri.AbsoluteUri, UseShellExecute = true },
             };
             process.Start();
         }
 
-        public bool ParseInternalScheme(Uri uri, out CommandEventArgs commandEventArgs)
+        public bool ParseInternalScheme(Uri? uri, [NotNullWhen(returnValue: true)] out CommandEventArgs? commandEventArgs)
         {
             if (uri?.Scheme == InternalScheme)
             {
@@ -156,7 +152,7 @@ namespace ResourceManager
             return false;
         }
 
-        public bool ParseLink(string linkText, out Uri uri)
+        public bool ParseLink(string linkText, [NotNullWhen(returnValue: true)] out Uri? uri)
         {
             if (linkText is null)
             {

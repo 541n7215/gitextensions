@@ -5,7 +5,6 @@ using System.Windows.Forms;
 using GitCommands;
 using GitUI.Properties;
 using GitUI.UserControls;
-using JetBrains.Annotations;
 using Microsoft.WindowsAPICodePack.Taskbar;
 
 namespace GitUI.HelperDialogs
@@ -15,8 +14,8 @@ namespace GitUI.HelperDialogs
         private readonly bool _useDialogSettings;
         private bool _errorOccurred;
 
-        private protected Action<FormStatus> ProcessCallback;
-        private protected Action<FormStatus> AbortCallback;
+        private protected Action<FormStatus>? ProcessCallback;
+        private protected Action<FormStatus>? AbortCallback;
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
         private protected FormStatus()
@@ -24,7 +23,7 @@ namespace GitUI.HelperDialogs
         {
         }
 
-        public FormStatus(GitUICommands commands, [CanBeNull] ConsoleOutputControl consoleOutput, bool useDialogSettings)
+        public FormStatus(GitUICommands? commands, ConsoleOutputControl? consoleOutput, bool useDialogSettings)
             : base(commands, enablePositionRestore: true)
         {
             _useDialogSettings = useDialogSettings;
@@ -99,8 +98,7 @@ namespace GitUI.HelperDialogs
         /// Gets the logged output text. Note that this is a separate string from what you see in the console output control.
         /// For instance, progress messages might be skipped; other messages might be added manually.
         /// </summary>
-        [NotNull]
-        private protected FormStatusOutputLog OutputLog { get; } = new FormStatusOutputLog();
+        private protected FormStatusOutputLog OutputLog { get; } = new();
 
         public bool ErrorOccurred()
         {
@@ -115,33 +113,31 @@ namespace GitUI.HelperDialogs
         public void Retry()
         {
             Reset();
-            ProcessCallback(this);
+            ProcessCallback?.Invoke(this);
         }
 
         public static void ShowErrorDialog(IWin32Window owner, string text, params string[] output)
         {
-            using (var form = new FormStatus(commands: null, new EditboxBasedConsoleOutputControl(), useDialogSettings: true))
+            using FormStatus form = new(commands: null, new EditboxBasedConsoleOutputControl(), useDialogSettings: true);
+            form.Text = text;
+            if (output?.Length > 0)
             {
-                form.Text = text;
-                if (output?.Length > 0)
+                foreach (string line in output)
                 {
-                    foreach (string line in output)
-                    {
-                        form.AppendMessage(line);
-                    }
+                    form.AppendMessage(line);
                 }
-
-                form.ProgressBar.Visible = false;
-                form.KeepDialogOpen.Visible = false;
-                form.Abort.Visible = false;
-
-                form.StartPosition = FormStartPosition.CenterParent;
-
-                // We know that an operation (whatever it may have been) has failed, so set the error state.
-                form.Done(false);
-
-                form.ShowDialog(owner);
             }
+
+            form.ProgressBar.Visible = false;
+            form.KeepDialogOpen.Visible = false;
+            form.Abort.Visible = false;
+
+            form.StartPosition = FormStartPosition.CenterParent;
+
+            // We know that an operation (whatever it may have been) has failed, so set the error state.
+            form.Done(false);
+
+            form.ShowDialog(owner);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -168,25 +164,6 @@ namespace GitUI.HelperDialogs
         private protected void AppendMessage(string text)
         {
             ConsoleOutput.AppendMessageFreeThreaded(text);
-        }
-
-        private static Icon BitmapToIcon(Bitmap bitmap)
-        {
-            IntPtr handle = IntPtr.Zero;
-            try
-            {
-                handle = bitmap.GetHicon();
-                var icon = Icon.FromHandle(handle);
-
-                return (Icon)icon.Clone();
-            }
-            finally
-            {
-                if (handle != IntPtr.Zero)
-                {
-                    NativeMethods.DestroyIcon(handle);
-                }
-            }
         }
 
         private protected void Done(bool isSuccess)
@@ -230,7 +207,7 @@ namespace GitUI.HelperDialogs
         private void SetIcon(Bitmap image)
         {
             Icon oldIcon = Icon;
-            Icon = BitmapToIcon(image);
+            Icon = image.ToIcon();
             oldIcon?.Dispose();
         }
 
@@ -277,7 +254,7 @@ namespace GitUI.HelperDialogs
         {
             try
             {
-                AbortCallback(this);
+                AbortCallback?.Invoke(this);
                 OutputLog.Append(Environment.NewLine + "Aborted");  // TODO: write to display control also, if we pull the function up to this base class
                 Done(false);
                 DialogResult = DialogResult.Abort;

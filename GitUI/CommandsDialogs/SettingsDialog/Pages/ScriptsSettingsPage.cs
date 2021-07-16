@@ -12,15 +12,14 @@ using GitCommands.Utils;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Script;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages
 {
     public partial class ScriptsSettingsPage : SettingsPageWithHeader
     {
-        private readonly TranslationString _scriptSettingsPageHelpDisplayArgumentsHelp = new TranslationString("Arguments help");
-        private readonly TranslationString _scriptSettingsPageHelpDisplayContent = new TranslationString(@"Use {option} for normal replacement.
+        private readonly TranslationString _scriptSettingsPageHelpDisplayArgumentsHelp = new("Arguments help");
+        private readonly TranslationString _scriptSettingsPageHelpDisplayContent = new(@"Use {option} for normal replacement.
 Use {{option}} for quoted replacement.
 
 User Input:
@@ -79,15 +78,15 @@ Current Branch:
             nameof(ScriptInfoProxy.Command),
             nameof(ScriptInfoProxy.Arguments),
         };
-        private static ImageList EmbeddedIcons = new ImageList
+        private static readonly ImageList EmbeddedIcons = new()
         {
             ColorDepth = ColorDepth.Depth32Bit
         };
-        private BindingList<ScriptInfoProxy> _scripts;
-        private SimpleHelpDisplayDialog _argumentsCheatSheet;
+        private readonly BindingList<ScriptInfoProxy> _scripts = new();
+        private SimpleHelpDisplayDialog? _argumentsCheatSheet;
         private bool _handlingCheck;
 
-        // settings maybe loaded before page is shwon or after
+        // settings maybe loaded before page is shown or after
         // we need to track that so we load images before we bind the list
         private bool _imagsLoaded;
 
@@ -120,15 +119,15 @@ Current Branch:
             };
         }
 
-        private ScriptInfoProxy SelectedScript { get; set; }
+        private ScriptInfoProxy? SelectedScript { get; set; }
 
         protected override void OnParentChanged(EventArgs e)
         {
             base.OnParentChanged(e);
 
-            if (Parent is null && _argumentsCheatSheet is object)
+            if (Parent is null)
             {
-                _argumentsCheatSheet.Close();
+                _argumentsCheatSheet?.Close();
             }
         }
 
@@ -139,9 +138,9 @@ Current Branch:
                 return;
             }
 
-            var rm = new System.Resources.ResourceManager("GitUI.Properties.Images", Assembly.GetExecutingAssembly());
+            System.Resources.ResourceManager rm = new("GitUI.Properties.Images", Assembly.GetExecutingAssembly());
 
-            // dummy request; for some strange reason the ResourceSets are not loaded untill after the first object request... bug?
+            // dummy request; for some strange reason the ResourceSets are not loaded until after the first object request... bug?
             rm.GetObject("dummy");
 
             using System.Resources.ResourceSet resourceSet = rm.GetResourceSet(CultureInfo.CurrentUICulture, true, true);
@@ -156,19 +155,16 @@ Current Branch:
             resourceSet.Close();
             rm.ReleaseAllResources();
 
-            lvScripts.LargeImageList =
-                lvScripts.SmallImageList = EmbeddedIcons;
+            lvScripts.LargeImageList = lvScripts.SmallImageList = EmbeddedIcons;
             _imagsLoaded = true;
 
-            if (_scripts is object)
-            {
-                BindScripts(_scripts, null);
-            }
+            BindScripts(_scripts, null);
         }
 
         protected override void SettingsToPage()
         {
-            _scripts = new BindingList<ScriptInfoProxy>();
+            _scripts.Clear();
+
             foreach (var script in ScriptManager.GetScripts())
             {
                 _scripts.Add(script);
@@ -195,7 +191,7 @@ Current Branch:
             AppSettings.OwnScripts = ScriptManager.SerializeIntoXml();
         }
 
-        private void BindScripts(IList<ScriptInfoProxy> scripts, ScriptInfoProxy selectedScript)
+        private void BindScripts(IList<ScriptInfoProxy> scripts, ScriptInfoProxy? selectedScript)
         {
             try
             {
@@ -214,7 +210,7 @@ Current Branch:
                 {
                     var color = !script.Enabled ? SystemColors.GrayText : SystemColors.WindowText;
 
-                    ListViewItem lvitem = new ListViewItem(script.Name)
+                    ListViewItem lvitem = new(script.Name)
                     {
                         ToolTipText = $"{script.Command} {script.Arguments}",
                         Tag = script,

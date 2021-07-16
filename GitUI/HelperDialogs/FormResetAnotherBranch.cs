@@ -1,8 +1,6 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using GitCommands;
 using GitCommands.Git;
 using GitCommands.Git.Commands;
 using GitExtUtils.GitUI;
@@ -14,15 +12,17 @@ namespace GitUI.HelperDialogs
 {
     public partial class FormResetAnotherBranch : GitModuleForm
     {
-        private IGitRef[] _localGitRefs;
+        private IGitRef[]? _localGitRefs;
         private readonly GitRevision _revision;
-        private readonly TranslationString _localRefInvalid = new TranslationString("The entered value '{0}' is not the name of an existing local branch.");
+        private readonly TranslationString _localRefInvalid = new("The entered value '{0}' is not the name of an existing local branch.");
 
         public static FormResetAnotherBranch Create(GitUICommands gitUiCommands, GitRevision revision)
-            => new FormResetAnotherBranch(gitUiCommands, revision ?? throw new NotSupportedException(Strings.NoRevision));
+            => new(gitUiCommands, revision ?? throw new NotSupportedException(TranslatedStrings.NoRevision));
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormResetAnotherBranch()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -40,6 +40,8 @@ namespace GitUI.HelperDialogs
 
             Height = tableLayoutPanel1.Height + tableLayoutPanel1.Top;
             tableLayoutPanel1.Dock = DockStyle.Fill;
+
+            ActiveControl = Branches;
 
             InitializeComplete();
 
@@ -63,7 +65,7 @@ namespace GitUI.HelperDialogs
 
             var selectedRevisionRemotes = _revision.Refs.Where(r => r.IsRemote).ToList();
 
-            return Module.GetRefs(false)
+            return Module.GetRefs(RefsFilter.Heads)
                 .Where(r => r.IsHead)
                 .Where(r => isDetachedHead || r.LocalName != currentBranch)
                 .OrderByDescending(r => selectedRevisionRemotes.Any(r.IsTrackingRemote)) // Put local branches that track these remotes first
@@ -87,12 +89,11 @@ namespace GitUI.HelperDialogs
             var gitRefToReset = _localGitRefs.FirstOrDefault(b => b.Name == Branches.Text);
             if (gitRefToReset is null)
             {
-                MessageBox.Show(string.Format(_localRefInvalid.Text, Branches.Text), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(string.Format(_localRefInvalid.Text, Branches.Text), TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            var repoPath = Path.GetFullPath(Module.WorkingDir);
-            var command = GitCommandHelpers.PushLocalCmd(repoPath, gitRefToReset.CompleteName, _revision.ObjectId, ForceReset.Checked);
+            var command = GitCommandHelpers.PushLocalCmd(gitRefToReset.CompleteName, _revision.ObjectId, ForceReset.Checked);
             bool success = FormProcess.ShowDialog(this, process: null, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
             if (success)
             {

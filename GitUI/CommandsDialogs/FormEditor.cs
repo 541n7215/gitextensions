@@ -2,22 +2,21 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Editor;
-using GitUI.Theming;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
 {
     public sealed partial class FormEditor : GitModuleForm
     {
-        private readonly TranslationString _saveChanges = new TranslationString("Do you want to save changes?");
-        private readonly TranslationString _saveChangesCaption = new TranslationString("Save changes");
-        private readonly TranslationString _cannotOpenFile = new TranslationString("Cannot open file:");
-        private readonly TranslationString _cannotSaveFile = new TranslationString("Cannot save file:");
+        private readonly TranslationString _saveChanges = new("Do you want to save changes?");
+        private readonly TranslationString _saveChangesCaption = new("Save changes");
+        private readonly TranslationString _cannotOpenFile = new("Cannot open file:");
+        private readonly TranslationString _cannotSaveFile = new("Cannot save file:");
 
-        [CanBeNull] private readonly string _fileName;
+        private readonly string? _fileName;
 
         private bool _hasChanges;
 
@@ -27,19 +26,19 @@ namespace GitUI.CommandsDialogs
             InitializeComponent();
         }
 
-        public FormEditor([NotNull] GitUICommands commands, [CanBeNull] string fileName, bool showWarning)
+        public FormEditor(GitUICommands commands, string? fileName, bool showWarning)
             : base(commands)
         {
             _fileName = fileName;
             InitializeComponent();
-            panelMessage.BackColor = AppColor.Branch.GetThemeColor();
+            panelMessage.BackColor = OtherColors.PanelMessageWarningColor;
             panelMessage.SetForeColorForBackColor();
             InitializeComplete();
 
             // for translation form
             if (_fileName is not null)
             {
-                OpenFile();
+                OpenFile(_fileName);
             }
 
             fileViewer.TextChanged += (s, e) => HasChanges = true;
@@ -57,20 +56,20 @@ namespace GitUI.CommandsDialogs
             }
         }
 
-        private void OpenFile()
+        private void OpenFile(string fileName)
         {
             try
             {
-                fileViewer.ViewFileAsync(_fileName);
+                fileViewer.ViewFileAsync(fileName);
                 fileViewer.IsReadOnly = false;
-                Text = _fileName;
+                Text = fileName;
 
                 // loading a new file from disk, the text hasn't been changed yet.
                 HasChanges = false;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, _cannotOpenFile.Text + Environment.NewLine + ex.Message, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, _cannotOpenFile.Text + Environment.NewLine + ex.Message, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
             }
         }
@@ -91,7 +90,7 @@ namespace GitUI.CommandsDialogs
                         }
                         catch (Exception ex)
                         {
-                            if (MessageBox.Show(this, $"{_cannotSaveFile.Text}{Environment.NewLine}{ex.Message}", Strings.Error, MessageBoxButtons.OKCancel, MessageBoxIcon.Error) == DialogResult.Cancel)
+                            if (MessageBox.Show(this, $"{_cannotSaveFile.Text}{Environment.NewLine}{ex.Message}", TranslatedStrings.Error, MessageBoxButtons.OKCancel, MessageBoxIcon.Error) == DialogResult.Cancel)
                             {
                                 e.Cancel = true;
                                 return;
@@ -141,16 +140,14 @@ namespace GitUI.CommandsDialogs
                 }
                 else
                 {
-                    using (var bytes = new MemoryStream())
+                    using MemoryStream bytes = new();
+                    bytes.Write(fileViewer.FilePreamble, 0, fileViewer.FilePreamble.Length);
+                    using (var writer = new StreamWriter(bytes, Module.FilesEncoding))
                     {
-                        bytes.Write(fileViewer.FilePreamble, 0, fileViewer.FilePreamble.Length);
-                        using (var writer = new StreamWriter(bytes, Module.FilesEncoding))
-                        {
-                            writer.Write(fileViewer.GetText());
-                        }
-
-                        File.WriteAllBytes(_fileName, bytes.ToArray());
+                        writer.Write(fileViewer.GetText());
                     }
+
+                    File.WriteAllBytes(_fileName, bytes.ToArray());
                 }
 
                 // we've written the changes out to disk now, nothing to save.
@@ -174,7 +171,7 @@ namespace GitUI.CommandsDialogs
         }
 
         internal TestAccessor GetTestAccessor()
-            => new TestAccessor(this);
+            => new(this);
 
         internal readonly struct TestAccessor
         {

@@ -10,13 +10,15 @@ namespace GitUI.CommandsDialogs
 {
     public sealed partial class FormMergeSubmodule : GitModuleForm
     {
-        private readonly TranslationString _stageFilename = new TranslationString("Stage {0}");
-        private readonly TranslationString _deleted = new TranslationString("deleted");
+        private readonly TranslationString _stageFilename = new("Stage {0}");
+        private readonly TranslationString _deleted = new("deleted");
 
         private readonly string _filename;
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormMergeSubmodule()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -38,6 +40,7 @@ namespace GitUI.CommandsDialogs
             tbLocal.Text = item.Local.ObjectId?.ToString() ?? _deleted.Text;
             tbRemote.Text = item.Remote.ObjectId?.ToString() ?? _deleted.Text;
             tbCurrent.Text = Module.GetSubmodule(_filename).GetCurrentCheckout()?.ToString() ?? "";
+            btCheckoutBranch.Enabled = item.Base.ObjectId is not null && item.Remote.ObjectId is not null;
         }
 
         private void btRefresh_Click(object sender, EventArgs e)
@@ -47,7 +50,7 @@ namespace GitUI.CommandsDialogs
 
         private void StageSubmodule()
         {
-            var args = new GitArgumentBuilder("add")
+            GitArgumentBuilder args = new("add")
             {
                 "--",
                 _filename.QuoteNE()
@@ -78,7 +81,7 @@ namespace GitUI.CommandsDialogs
         private void btCheckoutBranch_Click(object sender, EventArgs e)
         {
             var revisions = new[] { ObjectId.Parse(tbLocal.Text), ObjectId.Parse(tbRemote.Text) };
-            var submoduleCommands = new GitUICommands(Module.GetSubmoduleFullPath(_filename));
+            GitUICommands submoduleCommands = new(Module.GetSubmoduleFullPath(_filename));
             if (!submoduleCommands.StartCheckoutBranch(this, revisions))
             {
                 return;

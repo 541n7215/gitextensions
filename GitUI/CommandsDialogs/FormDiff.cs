@@ -10,39 +10,43 @@ using GitUI.HelperDialogs;
 using GitUI.Theming;
 using GitUI.UserControls;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
+using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
 {
     public partial class FormDiff : GitModuleForm
     {
-        private string _baseCommitDisplayStr;
-        private string _headCommitDisplayStr;
-        private GitRevision _baseRevision;
-        private GitRevision _headRevision;
-        private readonly GitRevision _mergeBase;
+        private string? _baseCommitDisplayStr;
+        private string? _headCommitDisplayStr;
+        private GitRevision? _baseRevision;
+        private GitRevision? _headRevision;
+        private readonly GitRevision? _mergeBase;
         private readonly IGitRevisionTester _revisionTester;
         private readonly IFileStatusListContextMenuController _revisionDiffContextMenuController;
         private readonly IFullPathResolver _fullPathResolver;
         private readonly IFindFilePredicateProvider _findFilePredicateProvider;
+        private readonly CancellationTokenSequence _viewChangesSequence = new();
 
-        private readonly ToolTip _toolTipControl = new ToolTip();
+        private readonly ToolTip _toolTipControl = new();
 
-        private readonly TranslationString _anotherBranchTooltip = new TranslationString("Select another branch");
-        private readonly TranslationString _anotherCommitTooltip = new TranslationString("Select another commit");
-        private readonly TranslationString _btnSwapTooltip = new TranslationString("Swap BASE and Compare commits");
-        private readonly TranslationString _ckCompareToMergeBase = new TranslationString("Compare to merge &base");
+        private readonly TranslationString _anotherBranchTooltip = new("Select another branch");
+        private readonly TranslationString _anotherCommitTooltip = new("Select another commit");
+        private readonly TranslationString _btnSwapTooltip = new("Swap BASE and Compare commits");
+        private readonly TranslationString _ckCompareToMergeBase = new("Compare to merge &base");
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormDiff()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
 
         public FormDiff(
             GitUICommands commands,
-            ObjectId baseId, ObjectId headId,
+            ObjectId baseId,
+            ObjectId headId,
             string baseCommitDisplayStr, string headCommitDisplayStr)
             : base(commands)
         {
@@ -64,7 +68,7 @@ namespace GitUI.CommandsDialogs
             _baseRevision = new GitRevision(baseId);
             _headRevision = new GitRevision(headId);
 
-            ObjectId mergeBase;
+            ObjectId? mergeBase;
             if (_baseRevision.ObjectId.IsArtificial || _headRevision.ObjectId.IsArtificial)
             {
                 mergeBase = null;
@@ -94,6 +98,21 @@ namespace GitUI.CommandsDialogs
             Load += delegate { PopulateDiffFiles(); };
         }
 
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _viewChangesSequence.Dispose();
+                components?.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
         private void FileViewer_TopScrollReached(object sender, EventArgs e)
         {
             DiffFiles.SelectPreviousVisibleItem();
@@ -111,9 +130,18 @@ namespace GitUI.CommandsDialogs
             lblBaseCommit.Text = _baseCommitDisplayStr;
             lblHeadCommit.Text = _headCommitDisplayStr;
 
-            DiffFiles.SetDiffs(ckCompareToMergeBase.Checked
-                ? new[] { _headRevision, _mergeBase }
-                : new[] { _headRevision, _baseRevision });
+            Validates.NotNull(_headRevision);
+
+            if (ckCompareToMergeBase.Checked)
+            {
+                Validates.NotNull(_mergeBase);
+                DiffFiles.SetDiffs(new[] { _headRevision, _mergeBase });
+            }
+            else
+            {
+                Validates.NotNull(_baseRevision);
+                DiffFiles.SetDiffs(new[] { _headRevision, _baseRevision });
+            }
 
             // Bug in git-for-windows: Comparing working directory to any branch, fails, due to -R
             // I.e., git difftool --gui --no-prompt --dir-diff -R HEAD fails, but
@@ -125,7 +153,8 @@ namespace GitUI.CommandsDialogs
 
         private void ShowSelectedFileDiff()
         {
-            DiffText.ViewChangesAsync(DiffFiles.SelectedItem);
+            _ = DiffText.ViewChangesAsync(DiffFiles.SelectedItem,
+                cancellationToken: _viewChangesSequence.Next());
         }
 
         private void btnSwap_Click(object sender, EventArgs e)
@@ -190,7 +219,8 @@ namespace GitUI.CommandsDialogs
 
         private void fileHistoryDiffToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GitItemStatus item = DiffFiles.SelectedGitItem;
+            GitItemStatus? item = DiffFiles.SelectedGitItem;
+            Validates.NotNull(item);
 
             if (item.IsTracked)
             {
@@ -200,7 +230,8 @@ namespace GitUI.CommandsDialogs
 
         private void blameToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GitItemStatus item = DiffFiles.SelectedGitItem;
+            GitItemStatus? item = DiffFiles.SelectedGitItem;
+            Validates.NotNull(item);
 
             if (item.IsTracked)
             {
@@ -218,7 +249,7 @@ namespace GitUI.CommandsDialogs
                 return candidates.Where(item => predicate(item.Name) || predicate(item.OldName));
             }
 
-            GitItemStatus selectedItem;
+            GitItemStatus? selectedItem;
             using (var searchWindow = new SearchWindow<GitItemStatus>(FindDiffFilesMatches)
             {
                 Owner = this
@@ -241,26 +272,33 @@ namespace GitUI.CommandsDialogs
 
         private void btnCompareDirectoriesWithDiffTool_Clicked(object sender, EventArgs e)
         {
-            Module.OpenWithDifftoolDirDiff((ckCompareToMergeBase.Checked ? _mergeBase : _baseRevision).Guid, _headRevision.Guid);
+            GitRevision? firstRevision = ckCompareToMergeBase.Checked ? _mergeBase : _baseRevision;
+            Validates.NotNull(firstRevision);
+            Validates.NotNull(_headRevision);
+            Module.OpenWithDifftoolDirDiff(firstRevision.Guid, _headRevision.Guid);
         }
 
         private void btnPickAnotherBranch_Click(object sender, EventArgs e)
         {
+            Validates.NotNull(_baseRevision);
             PickAnotherBranch(_baseRevision, ref _baseCommitDisplayStr, ref _baseRevision);
         }
 
         private void btnAnotherCommit_Click(object sender, EventArgs e)
         {
+            Validates.NotNull(_baseRevision);
             PickAnotherCommit(_baseRevision, ref _baseCommitDisplayStr, ref _baseRevision);
         }
 
         private void btnAnotherHeadBranch_Click(object sender, EventArgs e)
         {
+            Validates.NotNull(_headRevision);
             PickAnotherBranch(_headRevision, ref _headCommitDisplayStr, ref _headRevision);
         }
 
         private void btnAnotherHeadCommit_Click(object sender, EventArgs e)
         {
+            Validates.NotNull(_headRevision);
             PickAnotherCommit(_headRevision, ref _headCommitDisplayStr, ref _headRevision);
         }
 
@@ -271,6 +309,7 @@ namespace GitUI.CommandsDialogs
 
             openWithDifftoolToolStripMenuItem.Enabled = isAnyTracked;
             fileHistoryDiffToolstripMenuItem.Enabled = isAnyTracked && isExactlyOneItemSelected;
+            Validates.NotNull(DiffFiles.SelectedGitItem);
             blameToolStripMenuItem.Enabled = fileHistoryDiffToolstripMenuItem.Enabled && !DiffFiles.SelectedGitItem.IsSubmodule;
         }
 
@@ -301,30 +340,26 @@ namespace GitUI.CommandsDialogs
             selectedToLocalToolStripMenuItem.Enabled = _revisionDiffContextMenuController.ShouldShowMenuSelectedToLocal(selectionInfo);
         }
 
-        private void PickAnotherBranch(GitRevision preSelectCommit, ref string displayStr, [CanBeNull] ref GitRevision revision)
+        private void PickAnotherBranch(GitRevision preSelectCommit, ref string? displayStr, ref GitRevision? revision)
         {
-            using (var form = new FormCompareToBranch(UICommands, preSelectCommit.ObjectId))
+            using FormCompareToBranch form = new(UICommands, preSelectCommit.ObjectId);
+            if (form.ShowDialog(this) == DialogResult.OK)
             {
-                if (form.ShowDialog(this) == DialogResult.OK)
-                {
-                    displayStr = form.BranchName;
-                    var objectId = Module.RevParse(form.BranchName);
-                    revision = objectId is null ? null : new GitRevision(objectId);
-                    PopulateDiffFiles();
-                }
+                displayStr = form.BranchName;
+                var objectId = Module.RevParse(form.BranchName);
+                revision = objectId is null ? null : new GitRevision(objectId);
+                PopulateDiffFiles();
             }
         }
 
-        private void PickAnotherCommit(GitRevision preSelect, ref string displayStr, ref GitRevision revision)
+        private void PickAnotherCommit(GitRevision preSelect, ref string? displayStr, ref GitRevision? revision)
         {
-            using (var form = new FormChooseCommit(UICommands, preselectCommit: preSelect.Guid, showArtificial: true))
+            using FormChooseCommit form = new(UICommands, preselectCommit: preSelect.Guid, showArtificial: true);
+            if (form.ShowDialog(this) == DialogResult.OK)
             {
-                if (form.ShowDialog(this) == DialogResult.OK)
-                {
-                    revision = form.SelectedRevision;
-                    displayStr = form.SelectedRevision.Subject;
-                    PopulateDiffFiles();
-                }
+                revision = form.SelectedRevision;
+                displayStr = form.SelectedRevision?.Subject;
+                PopulateDiffFiles();
             }
         }
     }

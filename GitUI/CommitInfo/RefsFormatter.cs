@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using GitCommands;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.CommitInfo
@@ -25,15 +23,14 @@ namespace GitUI.CommitInfo
         /// </summary>
         private const int MaximumDisplayedRefsIfLimited = MaximumDisplayedLinesIfLimited - 2;
 
-        [NotNull]
         private readonly ILinkFactory _linkFactory;
 
-        public RefsFormatter([NotNull] ILinkFactory linkFactory)
+        public RefsFormatter(ILinkFactory linkFactory)
         {
             _linkFactory = linkFactory ?? throw new ArgumentNullException("RefsFormatter requires an ILinkFactory instance");
         }
 
-        public string FormatBranches(IEnumerable<string> branches, bool showAsLinks, bool limit)
+        public string FormatBranches(IEnumerable<string>? branches, bool showAsLinks, bool limit)
         {
             if (branches is null)
             {
@@ -41,7 +38,7 @@ namespace GitUI.CommitInfo
             }
 
             var (formattedBranches, truncated) = FilterAndFormatBranches(branches, showAsLinks, limit);
-            return ToString(formattedBranches, Strings.ContainedInBranches, Strings.ContainedInNoBranch, "branches", truncated);
+            return ToString(formattedBranches, TranslatedStrings.ContainedInBranches, TranslatedStrings.ContainedInNoBranch, "branches", truncated);
         }
 
         public string FormatTags(IReadOnlyList<string> tags, bool showAsLinks, bool limit)
@@ -53,17 +50,17 @@ namespace GitUI.CommitInfo
 
             bool truncate = limit && tags.Count > MaximumDisplayedLinesIfLimited;
             var formattedTags = FormatTags(truncate ? tags.Take(MaximumDisplayedRefsIfLimited) : tags);
-            return ToString(formattedTags, Strings.ContainedInTags, Strings.ContainedInNoTag, "tags", truncate);
+            return ToString(formattedTags, TranslatedStrings.ContainedInTags, TranslatedStrings.ContainedInNoTag, "tags", truncate);
 
             IEnumerable<string> FormatTags(IEnumerable<string> selectedTags)
             {
-                return selectedTags.Select(s => showAsLinks ? _linkFactory.CreateTagLink(s) : WebUtility.HtmlEncode(s));
+                return selectedTags.Select(s => showAsLinks ? _linkFactory.CreateTagLink(s ?? string.Empty) : WebUtility.HtmlEncode(s));
             }
         }
 
         private (IEnumerable<string> formattedBranches, bool truncated) FilterAndFormatBranches(IEnumerable<string> branches, bool showAsLinks, bool limit)
         {
-            var formattedBranches = new List<string>();
+            List<string> formattedBranches = new();
             bool truncated = false;
 
             const string remotesPrefix = "remotes/";
@@ -80,7 +77,7 @@ namespace GitUI.CommitInfo
 
             foreach (var branch in branches)
             {
-                string noPrefixBranch = branch;
+                string noPrefixBranch = branch ?? string.Empty;
                 bool branchIsLocal;
                 if (getLocal && getRemote)
                 {
@@ -127,7 +124,7 @@ namespace GitUI.CommitInfo
 
         private string ToString(IEnumerable<string> formattedRefs, string prefix, string textIfEmpty, string refsType, bool truncated)
         {
-            string linksJoined = formattedRefs?.Join(Environment.NewLine);
+            string? linksJoined = formattedRefs?.Join(Environment.NewLine);
             if (string.IsNullOrEmpty(linksJoined))
             {
                 return WebUtility.HtmlEncode(textIfEmpty);

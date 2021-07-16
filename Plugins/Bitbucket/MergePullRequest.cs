@@ -1,14 +1,14 @@
 ﻿using Newtonsoft.Json.Linq;
 using RestSharp;
 
-namespace Bitbucket
+namespace GitExtensions.Plugins.Bitbucket
 {
     internal class MergeRequestInfo
     {
-        public string Id { get; set; }
-        public string Version { get; set; }
-        public string ProjectKey { get; set; }
-        public string TargetRepo { get; set; }
+        public string? Id { get; set; }
+        public string? Version { get; set; }
+        public string? ProjectKey { get; set; }
+        public string? TargetRepo { get; set; }
     }
 
     internal class MergePullRequest : BitbucketRequestBase<JObject>
@@ -21,7 +21,7 @@ namespace Bitbucket
             _info = info;
         }
 
-        protected override object RequestBody => null;
+        protected override object? RequestBody => null;
 
         protected override Method RequestMethod => Method.POST;
 

@@ -1,12 +1,15 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using GitCommands;
+using GitCommands.Settings;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.BuildServerIntegration;
+using GitUIPluginInterfaces.Settings;
 
 namespace GitUI.UserControls.RevisionGrid.Columns
 {
@@ -37,12 +40,14 @@ namespace GitUI.UserControls.RevisionGrid.Columns
 
         public override void Refresh(int rowHeight, in VisibleRowRange range)
         {
-            var settings = _module().EffectiveSettings.BuildServer;
-
             var showIcon = AppSettings.ShowBuildStatusIconColumn;
             var showText = AppSettings.ShowBuildStatusTextColumn;
-            var columnVisible = settings.EnableIntegration.Value &&
-                                (showIcon || showText);
+
+            IBuildServerSettings buildServerSettings = _module().GetEffectiveSettings()
+                .BuildServer();
+
+            var columnVisible = buildServerSettings.EnableIntegration
+                && (showIcon || showText);
 
             Column.Visible = columnVisible;
 
@@ -84,7 +89,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             {
                 size = DpiUtil.Scale(new Size(8, 8));
 
-                var location = new Point(
+                Point location = new(
                     e.CellBounds.Left + (size.Width / 2),
                     e.CellBounds.Top + ((e.CellBounds.Height - size.Height) / 2));
 
@@ -179,12 +184,12 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             e.FormattingApplied = true;
         }
 
-        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, out string toolTip)
+        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
         {
             if (revision.BuildStatus is not null)
             {
                 toolTip = revision.BuildStatus.Tooltip ?? revision.BuildStatus.Description;
-                return true;
+                return toolTip is not null;
             }
 
             return base.TryGetToolTip(e, revision, out toolTip);

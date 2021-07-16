@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -24,7 +23,6 @@ namespace GitUI.CommandsDialogs
             base.WndProc(ref m);
         }
 
-        [SuppressMessage("ReSharper", "NotAccessedField.Local")]
         private struct RECT
         {
             public int Left;

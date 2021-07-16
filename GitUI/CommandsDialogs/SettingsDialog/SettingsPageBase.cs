@@ -12,12 +12,12 @@ using ResourceManager;
 namespace GitUI.CommandsDialogs.SettingsDialog
 {
     /// <summary>
-    /// set Text property in derived classes to set the title
+    /// set Text property in derived classes to set the title.
     /// </summary>
     public abstract partial class SettingsPageBase : GitExtensionsControl, ISettingsPage
     {
-        private readonly List<ISettingControlBinding> _controlBindings = new List<ISettingControlBinding>();
-        private ISettingsPageHost _pageHost;
+        private readonly List<ISettingControlBinding> _controlBindings = new();
+        private ISettingsPageHost? _pageHost;
 
         protected SettingsPageBase()
         {
@@ -41,7 +41,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
 
         protected CommonLogic CommonLogic => CheckSettingsLogic.CommonLogic;
 
-        protected GitModule Module => CommonLogic.Module;
+        protected GitModule? Module => CommonLogic.Module;
 
         protected ToolTip ToolTip => toolTip1;
 
@@ -52,7 +52,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
 
         public static T Create<[MeansImplicitUse] T>(ISettingsPageHost pageHost) where T : SettingsPageBase, new()
         {
-            var result = new T();
+            T result = new();
 
             result.AdjustForDpiScaling();
             result.EnableRemoveWordHotkey();
@@ -71,7 +71,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
 
         /// <summary>
         /// Called when SettingsPage is shown (again);
-        /// e. g. after user clicked a tree item
+        /// e. g. after user clicked a tree item.
         /// </summary>
         public virtual void OnPageShown()
         {
@@ -128,42 +128,42 @@ namespace GitUI.CommandsDialogs.SettingsDialog
 
         protected void AddSettingBinding(ISetting<bool> setting, CheckBox checkBox)
         {
-            var adapter = new BoolCheckBoxAdapter(setting, checkBox);
+            BoolCheckBoxAdapter adapter = new(setting, checkBox);
             AddControlBinding(adapter.CreateControlBinding());
         }
 
         protected void AddSettingBinding(ISetting<bool?> setting, CheckBox checkBox)
         {
-            var adapter = new BoolCheckBoxAdapter(setting, checkBox);
+            BoolCheckBoxAdapter adapter = new(setting, checkBox);
             AddControlBinding(adapter.CreateControlBinding());
         }
 
         protected void AddSettingBinding(ISetting<int> setting, TextBox control)
         {
-            var adapter = new IntTextBoxAdapter(setting, control);
+            IntTextBoxAdapter adapter = new(setting, control);
             AddControlBinding(adapter.CreateControlBinding());
         }
 
         protected void AddSettingBinding(ISetting<int?> setting, TextBox control)
         {
-            var adapter = new IntTextBoxAdapter(setting, control);
+            IntTextBoxAdapter adapter = new(setting, control);
             AddControlBinding(adapter.CreateControlBinding());
         }
 
         protected void AddSettingBinding(ISetting<string> setting, ComboBox comboBox)
         {
-            var adapter = new StringComboBoxAdapter(setting, comboBox);
+            StringComboBoxAdapter adapter = new(setting, comboBox);
             AddControlBinding(adapter.CreateControlBinding());
         }
 
-        private IReadOnlyList<string> _childrenText;
+        private IReadOnlyList<string>? _childrenText;
 
         /// <summary>
-        /// override to provide search keywords
+        /// override to provide search keywords.
         /// </summary>
         public virtual IEnumerable<string> GetSearchKeywords()
         {
-            return _childrenText ?? (_childrenText = GetChildrenText(this));
+            return _childrenText ??= GetChildrenText(this);
         }
 
         /// <summary>
@@ -172,9 +172,9 @@ namespace GitUI.CommandsDialogs.SettingsDialog
         /// </summary>
         private static IReadOnlyList<string> GetChildrenText(Control control)
         {
-            var texts = new List<string>();
+            List<string> texts = new();
 
-            var queue = new Queue<Control>();
+            Queue<Control> queue = new();
             queue.Enqueue(control);
 
             while (queue.Count != 0)
@@ -219,7 +219,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
         }
 
         public BoolCheckBoxAdapter(ISetting<bool?> setting, CheckBox checkBox)
-            : base(setting.FullPath, setting.Default.Value)
+            : base(setting.FullPath, setting.Default ?? false)
         {
             CustomControl = checkBox;
         }
@@ -243,7 +243,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
         }
 
         public IntTextBoxAdapter(ISetting<int?> setting, TextBox control)
-            : base(setting.FullPath, setting.Default.Value)
+            : base(setting.FullPath, setting.Default ?? 0)
         {
             CustomControl = control;
         }

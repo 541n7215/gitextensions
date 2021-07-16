@@ -2,12 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace GitCommands
+namespace GitExtUtils
 {
     public sealed class GitCommandConfiguration
     {
         private readonly ConcurrentDictionary<string, GitConfigItem[]> _configByCommand
-            = new ConcurrentDictionary<string, GitConfigItem[]>(StringComparer.Ordinal);
+            = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Gets the default configuration for git commands used by Git Extensions.
@@ -23,10 +23,12 @@ namespace GitCommands
 
             Default.Add(new GitConfigItem("log.showSignature", "false"), "log", "show", "whatchanged");
 
+            Default.Add(new GitConfigItem("color.ui", "never"), "diff", "range-diff");
             Default.Add(new GitConfigItem("diff.submodule", "short"), "diff");
             Default.Add(new GitConfigItem("diff.noprefix", "false"), "diff");
             Default.Add(new GitConfigItem("diff.mnemonicprefix", "false"), "diff");
             Default.Add(new GitConfigItem("diff.ignoreSubmodules", "none"), "diff", "status");
+            Default.Add(new GitConfigItem("core.safecrlf", "false"), "diff");
         }
 
         /// <summary>
@@ -41,7 +43,7 @@ namespace GitCommands
                 _configByCommand.AddOrUpdate(
                     command,
                     addValueFactory: _ => new[] { configItem },
-                    updateValueFactory: (_, items) => items.Append(configItem));
+                    updateValueFactory: (_, items) => items.AppendTo(configItem));
             }
         }
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using GitExtensions;
 using GitExtUtils;
 
 namespace GitCommands
@@ -41,7 +40,7 @@ namespace GitCommands
         /// Initialises a new instance of <see cref="CommandCache"/> with specified <paramref name="capacity"/>.
         /// </summary>
         /// <param name="capacity">The maximum number of commands to cache.</param>
-        public CommandCache(int capacity = 40)
+        public CommandCache(int capacity = 50)
         {
             _cache = new MruCache<string, (byte[] output, byte[] error)>(capacity: capacity);
         }
@@ -67,7 +66,7 @@ namespace GitCommands
         public bool TryGet(string? cmd, [NotNullWhen(returnValue: true)] out byte[]? output, [NotNullWhen(returnValue: true)] out byte[]? error)
         {
             // Never cache empty commands
-            if (!Strings.IsNullOrEmpty(cmd))
+            if (!string.IsNullOrEmpty(cmd))
             {
                 lock (_cache)
                 {
@@ -93,7 +92,7 @@ namespace GitCommands
         public void Add(string? cmd, byte[] output, byte[] error)
         {
             // Never cache empty commands
-            if (Strings.IsNullOrEmpty(cmd))
+            if (string.IsNullOrEmpty(cmd))
             {
                 return;
             }

@@ -62,17 +62,17 @@ namespace GitExtensions.UITests.UserControls.RevisionGrid
 
             _copyContextMenuItem.DropDownItems.Count.Should().Be(4);
 
-            _copyContextMenuItem.DropDownItems[0].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetCommitHash(1), 'C'));
-            _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetMessage(1), 'M'));
-            _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetAuthor(1), 'A'));
-            _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.Date, 'D'));
+            _copyContextMenuItem.DropDownItems[0].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
+            _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
+            _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
+            _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
         }
 
         [Test]
         public void Should_show_info_if_commit_has_defined_branches()
         {
-            var revision = new GitRevision(ObjectId.Random());
-            var refs = new List<IGitRef>
+            GitRevision revision = new(ObjectId.Random());
+            List<IGitRef> refs = new()
             {
                 new GitRef(null, revision.ObjectId, "refs/heads/branch1"),
                 new GitRef(null, revision.ObjectId, "refs/heads/branch2")
@@ -84,21 +84,21 @@ namespace GitExtensions.UITests.UserControls.RevisionGrid
             _copyContextMenuItem.ShowDropDown();
 
             _copyContextMenuItem.DropDownItems.Count.Should().Be(8);
-            _copyContextMenuItem.DropDownItems[0].Text.Should().Be(Strings.Branches);
+            _copyContextMenuItem.DropDownItems[0].Text.Should().Be(TranslatedStrings.Branches);
             _copyContextMenuItem.DropDownItems[1].Text.Should().EndWith("branch1");
             _copyContextMenuItem.DropDownItems[2].Text.Should().EndWith("branch2");
             _copyContextMenuItem.DropDownItems[3].Should().BeOfType<ToolStripSeparator>();
-            _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetCommitHash(1), 'C'));
-            _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetMessage(1), 'M'));
-            _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetAuthor(1), 'A'));
-            _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.Date, 'D'));
+            _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
+            _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
+            _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
+            _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
         }
 
         [Test]
         public void Should_show_info_if_commit_has_defined_tags()
         {
-            var revision = new GitRevision(ObjectId.Random());
-            var refs = new List<IGitRef>
+            GitRevision revision = new(ObjectId.Random());
+            List<IGitRef> refs = new()
             {
                 new GitRef(null, revision.ObjectId, "refs/tags/tag1"),
                 new GitRef(null, revision.ObjectId, "refs/tags/tag2")
@@ -110,21 +110,21 @@ namespace GitExtensions.UITests.UserControls.RevisionGrid
             _copyContextMenuItem.ShowDropDown();
 
             _copyContextMenuItem.DropDownItems.Count.Should().Be(8);
-            _copyContextMenuItem.DropDownItems[0].Text.Should().Be(Strings.Tags);
+            _copyContextMenuItem.DropDownItems[0].Text.Should().Be(TranslatedStrings.Tags);
             _copyContextMenuItem.DropDownItems[1].Text.Should().EndWith("tag1");
             _copyContextMenuItem.DropDownItems[2].Text.Should().EndWith("tag2");
             _copyContextMenuItem.DropDownItems[3].Should().BeOfType<ToolStripSeparator>();
-            _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetCommitHash(1), 'C'));
-            _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetMessage(1), 'M'));
-            _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetAuthor(1), 'A'));
-            _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.Date, 'D'));
+            _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
+            _copyContextMenuItem.DropDownItems[5].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
+            _copyContextMenuItem.DropDownItems[6].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
+            _copyContextMenuItem.DropDownItems[7].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
         }
 
         [Test]
         public void Should_show_info_if_commit_has_defined_branches_and_tags()
         {
-            var revision = new GitRevision(ObjectId.Random());
-            var refs = new List<IGitRef>
+            GitRevision revision = new(ObjectId.Random());
+            List<IGitRef> refs = new()
             {
                 new GitRef(null, revision.ObjectId, "refs/tags/tag1"),
                 new GitRef(null, revision.ObjectId, "refs/heads/branch1"),
@@ -138,38 +138,38 @@ namespace GitExtensions.UITests.UserControls.RevisionGrid
             _copyContextMenuItem.ShowDropDown();
 
             _copyContextMenuItem.DropDownItems.Count.Should().Be(12);
-            _copyContextMenuItem.DropDownItems[0].Text.Should().Be(Strings.Branches);
+            _copyContextMenuItem.DropDownItems[0].Text.Should().Be(TranslatedStrings.Branches);
             _copyContextMenuItem.DropDownItems[1].Text.Should().EndWith("branch1");
             _copyContextMenuItem.DropDownItems[2].Text.Should().EndWith("branch2");
             _copyContextMenuItem.DropDownItems[3].Should().BeOfType<ToolStripSeparator>();
-            _copyContextMenuItem.DropDownItems[4].Text.Should().Be(Strings.Tags);
+            _copyContextMenuItem.DropDownItems[4].Text.Should().Be(TranslatedStrings.Tags);
             _copyContextMenuItem.DropDownItems[5].Text.Should().EndWith("tag1");
             _copyContextMenuItem.DropDownItems[6].Text.Should().EndWith("tag2");
             _copyContextMenuItem.DropDownItems[7].Should().BeOfType<ToolStripSeparator>();
-            _copyContextMenuItem.DropDownItems[8].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetCommitHash(1), 'C'));
-            _copyContextMenuItem.DropDownItems[9].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetMessage(1), 'M'));
-            _copyContextMenuItem.DropDownItems[10].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetAuthor(1), 'A'));
-            _copyContextMenuItem.DropDownItems[11].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.Date, 'D'));
+            _copyContextMenuItem.DropDownItems[8].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(1), 'C'));
+            _copyContextMenuItem.DropDownItems[9].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(1), 'M'));
+            _copyContextMenuItem.DropDownItems[10].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(1), 'A'));
+            _copyContextMenuItem.DropDownItems[11].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.Date, 'D'));
         }
 
         [Test]
         public void Should_should_show_info_for_multiple_commits()
         {
-            var rev1 = new GitRevision(ObjectId.Random())
+            GitRevision rev1 = new(ObjectId.Random())
             {
                 Author = "Author1",
                 AuthorEmail = "author1@foo.bla",
-                AuthorDate = new DateTime(2018, 10, 23, 11, 34, 21),
+                AuthorUnixTime = DateTimeUtils.ToUnixTime(new DateTime(2018, 10, 23, 11, 34, 21)),
             };
-            var rev2 = new GitRevision(ObjectId.Random())
+            GitRevision rev2 = new(ObjectId.Random())
             {
                 Author = "Author2",
                 AuthorEmail = "author2@foo.bla",
                 Committer = "Committer2",
                 CommitterEmail = "committer2@foo.bar",
-                CommitDate = new DateTime(2018, 10, 23, 11, 34, 21),
+                CommitUnixTime = DateTimeUtils.ToUnixTime(new DateTime(2018, 10, 23, 11, 34, 21)),
             };
-            var rev3 = new GitRevision(ObjectId.Random())
+            GitRevision rev3 = new(ObjectId.Random())
             {
                 Author = "Author3",
                 AuthorEmail = "author3@foo.bla",
@@ -181,11 +181,11 @@ namespace GitExtensions.UITests.UserControls.RevisionGrid
 
             _copyContextMenuItem.DropDownItems.Count.Should().Be(5);
 
-            _copyContextMenuItem.DropDownItems[0].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetCommitHash(revisions.Length), 'C'));
-            _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetMessage(revisions.Length), 'M'));
-            _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetAuthor(revisions.Length), 'A'));
-            _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetAuthorDate(revisions.Length), 'T'));
-            _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.Strings.GetCommitDate(revisions.Length), 'D'));
+            _copyContextMenuItem.DropDownItems[0].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitHash(revisions.Length), 'C'));
+            _copyContextMenuItem.DropDownItems[1].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetMessage(revisions.Length), 'M'));
+            _copyContextMenuItem.DropDownItems[2].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthor(revisions.Length), 'A'));
+            _copyContextMenuItem.DropDownItems[3].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetAuthorDate(revisions.Length), 'T'));
+            _copyContextMenuItem.DropDownItems[4].Text.Should().StartWith(AddHotKey(ResourceManager.TranslatedStrings.GetCommitDate(revisions.Length), 'D'));
         }
 
         private string AddHotKey(string label, char? hotkey)

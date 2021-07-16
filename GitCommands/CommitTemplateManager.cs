@@ -32,7 +32,7 @@ namespace GitCommands
         /// </summary>
         /// <param name="templateName">The name of the template.</param>
         /// <param name="templateText">The body of the template.</param>
-        void Register(string templateName, Func<string> templateText, Image icon);
+        void Register(string templateName, Func<string> templateText, Image? icon);
 
         /// <summary>
         /// Allows a plugin to unregister a commit template.
@@ -48,9 +48,9 @@ namespace GitCommands
             public readonly string Name;
 
             public readonly Func<string> Text;
-            public readonly Image Icon;
+            public readonly Image? Icon;
 
-            public RegisteredCommitTemplateItem(string name, Func<string> text, Image icon)
+            public RegisteredCommitTemplateItem(string name, Func<string> text, Image? icon)
             {
                 Name = name;
                 Text = text;
@@ -58,7 +58,7 @@ namespace GitCommands
             }
         }
 
-        private static readonly List<RegisteredCommitTemplateItem> RegisteredTemplatesStorage = new List<RegisteredCommitTemplateItem>();
+        private static readonly List<RegisteredCommitTemplateItem> RegisteredTemplatesStorage = new();
         private readonly IFileSystem _fileSystem;
         private readonly Func<IGitModule> _getModule;
         private readonly IFullPathResolver _fullPathResolver;
@@ -122,7 +122,7 @@ namespace GitCommands
         /// </summary>
         /// <param name="templateName">The name of the template.</param>
         /// <param name="templateText">The body of the template.</param>
-        public void Register(string templateName, Func<string> templateText, Image icon)
+        public void Register(string templateName, Func<string> templateText, Image? icon)
         {
             lock (RegisteredTemplatesStorage)
             {

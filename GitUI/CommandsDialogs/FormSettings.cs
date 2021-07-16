@@ -11,8 +11,6 @@ using GitUI.CommandsDialogs.SettingsDialog;
 using GitUI.CommandsDialogs.SettingsDialog.Pages;
 using GitUI.CommandsDialogs.SettingsDialog.Plugins;
 using GitUI.Properties;
-using JetBrains.Annotations;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
@@ -23,22 +21,25 @@ namespace GitUI.CommandsDialogs
 
         #region Translation
 
-        private readonly TranslationString _cantSaveSettings = new TranslationString("Failed to save all settings");
+        private readonly TranslationString _cantSaveSettings = new("Failed to save all settings");
 
         #endregion
 
-        [CanBeNull] private static Type _lastSelectedSettingsPageType;
+        private static Type? _lastSelectedSettingsPageType;
         private readonly CommonLogic _commonLogic;
         private readonly string _translatedTitle;
-        private SettingsPageReference _initialPage;
+        private SettingsPageReference? _initialPage;
+        private bool _saved = false;
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormSettings()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
 
-        public FormSettings([NotNull] GitUICommands commands, SettingsPageReference initialPage = null)
+        public FormSettings(GitUICommands commands, SettingsPageReference? initialPage = null)
             : base(commands)
         {
             InitializeComponent();
@@ -97,17 +98,15 @@ namespace GitUI.CommandsDialogs
             Save();
         }
 
-        public static DialogResult ShowSettingsDialog(GitUICommands uiCommands, IWin32Window owner, SettingsPageReference initialPage = null)
+        public static DialogResult ShowSettingsDialog(GitUICommands uiCommands, IWin32Window? owner, SettingsPageReference? initialPage = null)
         {
             DialogResult result = DialogResult.None;
 
-            using (var form = new FormSettings(uiCommands, initialPage))
+            using FormSettings form = new(uiCommands, initialPage);
+            AppSettings.UsingContainer(form._commonLogic.RepoDistSettingsSet.GlobalSettings, () =>
             {
-                AppSettings.UsingContainer(form._commonLogic.RepoDistSettingsSet.GlobalSettings, () =>
-                {
-                    result = form.ShowDialog(owner);
-                });
-            }
+                result = form.ShowDialog(owner);
+            });
 
             return result;
         }
@@ -195,18 +194,16 @@ namespace GitUI.CommandsDialogs
             panelCurrentSettingsPage.Controls.Clear();
 
             var settingsPage = e.SettingsPage;
-            if (settingsPage is not null)
-            {
-                _lastSelectedSettingsPageType = settingsPage.GetType();
-            }
 
-            if (settingsPage?.GuiControl is not null)
+            _lastSelectedSettingsPageType = settingsPage.GetType();
+
+            if (settingsPage.GuiControl is not null)
             {
                 panelCurrentSettingsPage.Controls.Add(settingsPage.GuiControl);
-                e.SettingsPage.GuiControl.Dock = DockStyle.Fill;
+                settingsPage.GuiControl.Dock = DockStyle.Fill;
 
-                string title = e.SettingsPage.GetTitle();
-                if (e.SettingsPage is PluginSettingsPage)
+                string title = settingsPage.GetTitle();
+                if (settingsPage is PluginSettingsPage)
                 {
                     title = "Plugin: " + title;
                 }
@@ -255,21 +252,23 @@ namespace GitUI.CommandsDialogs
                 // TODO: this method has a generic sounding name but only saves some specific settings
                 AppSettings.SaveSettings();
 
+                _saved = true;
+
                 return true;
             }
             catch (SaveSettingsException ex) when (ex.InnerException is not null)
             {
-                using var dialog = new TaskDialog
+                TaskDialogPage page = new()
                 {
-                    OwnerWindowHandle = Handle,
                     Text = ex.InnerException.Message,
-                    InstructionText = _cantSaveSettings.Text,
-                    Caption = Strings.Error,
-                    StandardButtons = TaskDialogStandardButtons.Ok,
-                    Icon = TaskDialogStandardIcon.Error,
-                    Cancelable = true,
+                    Heading = _cantSaveSettings.Text,
+                    Caption = TranslatedStrings.Error,
+                    Buttons = { TaskDialogButton.OK },
+                    Icon = TaskDialogIcon.Error,
+                    AllowCancel = true,
+                    SizeToContent = true
                 };
-                dialog.Show();
+                TaskDialog.ShowDialog(Handle, page);
 
                 return false;
             }
@@ -287,6 +286,14 @@ namespace GitUI.CommandsDialogs
                 }
 
                 settingsTreeView.GotoPage(_initialPage);
+            }
+        }
+
+        private void FormSettings_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (_saved)
+            {
+                DialogResult = DialogResult.OK;
             }
         }
 

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using GitCommands;
 using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Graph;
 using GitUIPluginInterfaces;
@@ -26,7 +24,7 @@ namespace GitUITests.UserControls.RevisionGrid
         // Increase this number to create a larger test set.
         // Advice: set this number to 1000 for thread safety test
         private const int _numberOfRevisionsAddedPerRun = 500;
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
 
         private RevisionGraph _revisionGraph;
 
@@ -35,7 +33,7 @@ namespace GitUITests.UserControls.RevisionGrid
         {
             _revisionGraph = new RevisionGraph();
 
-            GitRevision revision = new GitRevision(ObjectId.Random());
+            GitRevision revision = new(ObjectId.Random());
 
             // Mark the first revision as the current checkout
             _revisionGraph.Add(revision, RevisionNodeFlags.CheckedOut);
@@ -47,19 +45,21 @@ namespace GitUITests.UserControls.RevisionGrid
             for (int i = 0; i < _numberOfRepeats; i++)
             {
                 // Simulate thread that loads revisions from git
-                var loadRevisionsTask = new Task(() => LoadRandomRevisions());
+                Task loadRevisionsTask = new(() => LoadRandomRevisions());
 
                 // Simulate thread that caches the rows in the background
-                var buildCacheTask = new Task(() => BuildCache());
+                Task buildCacheTask = new(() => BuildCache());
 
                 // Simulate thread that renders
-                var renderTask = new Task(() => Render());
+                Task renderTask = new(() => Render());
 
                 loadRevisionsTask.Start();
                 buildCacheTask.Start();
                 renderTask.Start();
 
+#pragma warning disable VSTHRD002
                 Task.WaitAll(loadRevisionsTask, buildCacheTask, renderTask);
+#pragma warning restore VSTHRD002
 
                 // One last 'cache to', in case the loading of the revisions was finished after building the cache (unlikely)
                 _revisionGraph.CacheTo(_revisionGraph.Count, _revisionGraph.Count);
@@ -71,11 +71,11 @@ namespace GitUITests.UserControls.RevisionGrid
 
         private void LoadRandomRevisions()
         {
-            List<GitRevision> randomRevisions = new List<GitRevision>();
+            List<GitRevision> randomRevisions = new();
 
             for (int i = 0; i < _numberOfRevisionsAddedPerRun; i++)
             {
-                GitRevision revision = new GitRevision(ObjectId.Random());
+                GitRevision revision = new(ObjectId.Random());
                 if (randomRevisions.Count > 1)
                 {
                     var randomRevision1 = randomRevisions[_random.Next(randomRevisions.Count - 1)];

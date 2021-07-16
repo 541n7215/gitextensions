@@ -57,6 +57,7 @@ namespace GitUI.CommandsDialogs
             this.toolStripFileExplorer = new System.Windows.Forms.ToolStripButton();
             this.userShell = new System.Windows.Forms.ToolStripSplitButton();
             this.EditSettings = new System.Windows.Forms.ToolStripButton();
+            this.toolStripAdvancedFilterButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
             this.toolStripBranchFilterComboBox = new System.Windows.Forms.ToolStripComboBox();
             this.toolStripBranchFilterDropDownButton = new System.Windows.Forms.ToolStripDropDownButton();
@@ -245,6 +246,7 @@ namespace GitUI.CommandsDialogs
             // 
             this.ToolStripMain.ClickThrough = true;
             this.ToolStripMain.Dock = System.Windows.Forms.DockStyle.None;
+            this.ToolStripMain.DrawBorder = false;
             this.ToolStripMain.GripMargin = new System.Windows.Forms.Padding(0);
             this.ToolStripMain.GripStyle = ToolStripGripStyle.Hidden;
             this.ToolStripMain.ImeMode = System.Windows.Forms.ImeMode.NoControl;
@@ -279,10 +281,12 @@ namespace GitUI.CommandsDialogs
             // 
             this.ToolStripFilters.ClickThrough = true;
             this.ToolStripFilters.Dock = System.Windows.Forms.DockStyle.None;
+            this.ToolStripFilters.DrawBorder = false;
             this.ToolStripFilters.GripMargin = new System.Windows.Forms.Padding(0);
             this.ToolStripFilters.GripStyle = ToolStripGripStyle.Hidden;
             this.ToolStripFilters.ImeMode = System.Windows.Forms.ImeMode.NoControl;
             this.ToolStripFilters.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStripAdvancedFilterButton,
             this.toolStripLabel1,
             this.toolStripBranchFilterComboBox,
             this.toolStripBranchFilterDropDownButton,
@@ -376,12 +380,12 @@ namespace GitUI.CommandsDialogs
             // 
             // toolStripButtonLevelUp
             // 
-            this.toolStripButtonLevelUp.AutoToolTip = false;
             this.toolStripButtonLevelUp.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
             this.toolStripButtonLevelUp.Image = global::GitUI.Properties.Images.SubmodulesManage;
             this.toolStripButtonLevelUp.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButtonLevelUp.Name = "toolStripButtonLevelUp";
             this.toolStripButtonLevelUp.Size = new System.Drawing.Size(32, 22);
+            this.toolStripButtonLevelUp.ToolTipText = "Submodules";
             this.toolStripButtonLevelUp.ButtonClick += new System.EventHandler(this.toolStripButtonLevelUp_ButtonClick);
             this.toolStripButtonLevelUp.DropDownOpening += new System.EventHandler(this.toolStripButtonLevelUp_DropDownOpening);
             // 
@@ -605,11 +609,22 @@ namespace GitUI.CommandsDialogs
             this.EditSettings.ToolTipText = "Settings";
             this.EditSettings.Click += new System.EventHandler(this.OnShowSettingsClick);
             // 
+            // toolStripAdvancedFilterButton
+            // 
+            this.toolStripAdvancedFilterButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.toolStripAdvancedFilterButton.Image = global::GitUI.Properties.Images.FunnelPencil;
+            this.toolStripAdvancedFilterButton.Name = "toolStripAdvancedFilterButton";
+            this.toolStripAdvancedFilterButton.Size = new System.Drawing.Size(23, 22);
+            this.toolStripAdvancedFilterButton.ToolTipText = "Advanced filter";
+            this.toolStripAdvancedFilterButton.Click += new System.EventHandler(this.AdvancedFilterButton_Click);
+            // 
             // toolStripLabel1
             // 
             this.toolStripLabel1.Name = "toolStripLabel1";
             this.toolStripLabel1.Size = new System.Drawing.Size(58, 22);
+            this.toolStripLabel1.Tag = "ToolBar_group:Branch filter";
             this.toolStripLabel1.Text = "Branches:";
+            this.toolStripLabel1.ToolTipText = "Branch filter";
             // 
             // toolStripBranchFilterComboBox
             // 
@@ -619,6 +634,7 @@ namespace GitUI.CommandsDialogs
             this.toolStripBranchFilterComboBox.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.toolStripBranchFilterComboBox.Name = "toolStripBranchFilterComboBox";
             this.toolStripBranchFilterComboBox.Size = new System.Drawing.Size(100, 23);
+            this.toolStripBranchFilterComboBox.Tag = "ToolBar_group:Branch filter";
             this.toolStripBranchFilterComboBox.Click += new System.EventHandler(this.toolStripBranchFilterComboBox_Click);
             // 
             // toolStripBranchFilterDropDownButton
@@ -627,6 +643,8 @@ namespace GitUI.CommandsDialogs
             this.toolStripBranchFilterDropDownButton.Image = global::GitUI.Properties.Images.EditFilter;
             this.toolStripBranchFilterDropDownButton.Name = "toolStripBranchFilterDropDownButton";
             this.toolStripBranchFilterDropDownButton.Size = new System.Drawing.Size(29, 22);
+            this.toolStripBranchFilterDropDownButton.Tag = "ToolBar_group:Branch filter";
+            this.toolStripBranchFilterDropDownButton.Text = "Branch type";
             // 
             // toolStripSeparator19
             // 
@@ -637,7 +655,9 @@ namespace GitUI.CommandsDialogs
             // 
             this.toolStripRevisionFilterLabel.Name = "toolStripRevisionFilterLabel";
             this.toolStripRevisionFilterLabel.Size = new System.Drawing.Size(36, 22);
+            this.toolStripRevisionFilterLabel.Tag = "ToolBar_group:Text filter";
             this.toolStripRevisionFilterLabel.Text = "Filter:";
+            this.toolStripRevisionFilterLabel.ToolTipText = "Text filter";
             // 
             // toolStripRevisionFilterTextBox
             // 
@@ -646,6 +666,7 @@ namespace GitUI.CommandsDialogs
             this.toolStripRevisionFilterTextBox.ForeColor = System.Drawing.SystemColors.ControlText;
             this.toolStripRevisionFilterTextBox.Name = "toolStripRevisionFilterTextBox";
             this.toolStripRevisionFilterTextBox.Size = new System.Drawing.Size(100, 25);
+            this.toolStripRevisionFilterTextBox.Tag = "ToolBar_group:Text filter";
             // 
             // toolStripRevisionFilterDropDownButton
             // 
@@ -654,6 +675,8 @@ namespace GitUI.CommandsDialogs
             this.toolStripRevisionFilterDropDownButton.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripRevisionFilterDropDownButton.Name = "toolStripRevisionFilterDropDownButton";
             this.toolStripRevisionFilterDropDownButton.Size = new System.Drawing.Size(29, 22);
+            this.toolStripRevisionFilterDropDownButton.Tag = "ToolBar_group:Text filter";
+            this.toolStripRevisionFilterDropDownButton.Text = "Filter type";
             // 
             // ShowFirstParent
             // 
@@ -871,7 +894,7 @@ namespace GitUI.CommandsDialogs
             this.revisionGpgInfo1.Location = new System.Drawing.Point(0, 0);
             this.revisionGpgInfo1.Margin = new System.Windows.Forms.Padding(0);
             this.revisionGpgInfo1.Name = "revisionGpgInfo1";
-            this.revisionGpgInfo1.Padding = new System.Windows.Forms.Padding(8);
+            this.revisionGpgInfo1.Padding = new System.Windows.Forms.Padding(6);
             this.revisionGpgInfo1.Size = new System.Drawing.Size(646, 264);
             this.revisionGpgInfo1.TabIndex = 0;
             // 
@@ -1756,7 +1779,7 @@ namespace GitUI.CommandsDialogs
             // 
             this.toolPanel.ContentPanel.Controls.Add(this.MainSplitContainer);
             this.toolPanel.ContentPanel.Margin = new System.Windows.Forms.Padding(0);
-            this.toolPanel.ContentPanel.Padding = new System.Windows.Forms.Padding(8);
+            this.toolPanel.ContentPanel.Padding = new System.Windows.Forms.Padding(6);
             this.toolPanel.ContentPanel.Size = new System.Drawing.Size(1846, 1023);
             this.toolPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.toolPanel.LeftToolStripPanelVisible = false;
@@ -1786,11 +1809,12 @@ namespace GitUI.CommandsDialogs
             // 
             this.ToolStripScripts.ClickThrough = true;
             this.ToolStripScripts.Dock = System.Windows.Forms.DockStyle.None;
+            this.ToolStripScripts.DrawBorder = false;
             this.ToolStripScripts.GripMargin = new System.Windows.Forms.Padding(0);
             this.ToolStripScripts.GripStyle = ToolStripGripStyle.Hidden;
             this.ToolStripScripts.ImeMode = System.Windows.Forms.ImeMode.NoControl;
             this.ToolStripScripts.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
-            this.ToolStripScripts.Location = new System.Drawing.Point(3, 50);
+            this.ToolStripScripts.Location = new System.Drawing.Point(890, 0);
             this.ToolStripScripts.Name = "toolStripScripts";
             this.ToolStripScripts.Padding = new System.Windows.Forms.Padding(0);
             this.ToolStripScripts.Size = new System.Drawing.Size(43, 25);
@@ -1889,6 +1913,7 @@ namespace GitUI.CommandsDialogs
         private ToolStripMenuItem manageStashesToolStripMenuItem;
         private ToolStripSeparator toolStripSeparator17;
         private ToolStripSeparator toolStripSeparator19;
+        private ToolStripButton toolStripAdvancedFilterButton;
         private ToolStripLabel toolStripLabel1;
         private ToolStripComboBox toolStripBranchFilterComboBox;
         private ToolStripDropDownButton toolStripBranchFilterDropDownButton;

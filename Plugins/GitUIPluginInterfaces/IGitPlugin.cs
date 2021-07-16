@@ -1,19 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
-using JetBrains.Annotations;
 
 namespace GitUIPluginInterfaces
 {
     public interface IGitPlugin
     {
-        string Name { get; }
+        Guid Id { get; }
 
-        string Description { get; }
+        string? Name { get; }
 
-        [CanBeNull]
-        Image Icon { get; }
+        string? Description { get; }
 
-        IGitPluginSettingsContainer SettingsContainer { get; set; }
+        Image? Icon { get; }
+
+        IGitPluginSettingsContainer? SettingsContainer { get; set; }
 
         bool HasSettings { get; }
 

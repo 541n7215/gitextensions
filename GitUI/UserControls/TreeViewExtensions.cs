@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Text;
 using System.Windows.Forms;
 
 namespace GitUI.UserControls
@@ -39,13 +38,13 @@ namespace GitUI.UserControls
         /// </summary>
         public static HashSet<string> GetExpandedNodesState(this TreeNode node)
         {
-            var result = new HashSet<string>();
+            HashSet<string> result = new();
             node.DoGetExpandedNodesState(result);
             return result;
         }
 
         /// <summary>
-        /// Restores the expanded state of nodes under the input node using the set returned by GetExpandedNodesState
+        /// Restores the expanded state of nodes under the input node using the set returned by GetExpandedNodesState.
         /// </summary>
         public static void RestoreExpandedNodesState(this TreeNode node, HashSet<string> expandedNodes)
         {
@@ -69,7 +68,7 @@ namespace GitUI.UserControls
             }
         }
 
-        public static TreeNode GetNodeFromPath(this TreeNode node, string path)
+        public static TreeNode? GetNodeFromPath(this TreeNode node, string? path)
         {
             if (GetFullNamePath(node) == path)
             {

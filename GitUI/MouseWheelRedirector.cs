@@ -8,7 +8,7 @@ namespace GitUI
 {
     public sealed class MouseWheelRedirector : IMessageFilter
     {
-        private static readonly MouseWheelRedirector instance = new MouseWheelRedirector();
+        private static readonly MouseWheelRedirector instance = new();
 
         private MouseWheelRedirector()
         {
@@ -57,14 +57,14 @@ namespace GitUI
                 return false;
             }
 
-            if (hwnd == m.HWnd && !isNonScrollableRichTextBox(control))
+            if (hwnd == m.HWnd && !IsNonScrollableRichTextBox(control))
             {
                 return false;
             }
 
             while (control is not (null or GitExtensionsControl))
             {
-                bool nonScrollableRtbx = isNonScrollableRichTextBox(control);
+                bool nonScrollableRtbx = IsNonScrollableRichTextBox(control);
 
                 control = control.Parent;
                 if (nonScrollableRtbx)
@@ -81,14 +81,12 @@ namespace GitUI
             NativeMethods.SendMessage(hwnd, m.Msg, m.WParam, m.LParam);
             return true;
 
-            bool isNonScrollableRichTextBox(Control c) =>
-                c is RichTextBox rtb && rtb.ScrollBars == RichTextBoxScrollBars.None;
+            static bool IsNonScrollableRichTextBox(Control c) => c is RichTextBox { ScrollBars: RichTextBoxScrollBars.None };
         }
 
         private static class NativeMethods
         {
             // P/Invoke declarations
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Portability", "CA1901:PInvokeDeclarationsShouldBePortable", MessageId = "0", Justification = "https://social.msdn.microsoft.com/Forums/en-US/180fcf90-ff90-45b2-839f-438eb17f2f07/is-this-a-bug-in-vs-code-analysis?forum=vstscode")]
             [DllImport("user32.dll")]
             public static extern IntPtr WindowFromPoint(POINT pt);
 
@@ -107,8 +105,8 @@ namespace GitUI
                     Y = y;
                 }
 
-                public static implicit operator Point(POINT p) => new Point(p.X, p.Y);
-                public static implicit operator POINT(Point p) => new POINT(p.X, p.Y);
+                public static implicit operator Point(POINT p) => new(p.X, p.Y);
+                public static implicit operator POINT(Point p) => new(p.X, p.Y);
             }
         }
     }

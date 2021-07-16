@@ -5,22 +5,25 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using GitCommands;
+using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
 {
     public sealed partial class FormAddToGitIgnore : GitModuleForm
     {
-        private readonly TranslationString _addToLocalExcludeTitle = new TranslationString("Add file(s) to .git/info/exclude");
-        private readonly TranslationString _matchingFilesString = new TranslationString("{0} file(s) matched");
-        private readonly TranslationString _updateStatusString = new TranslationString("Updating ...");
+        private readonly TranslationString _addToLocalExcludeTitle = new("Add file(s) to .git/info/exclude");
+        private readonly TranslationString _matchingFilesString = new("{0} file(s) matched");
+        private readonly TranslationString _updateStatusString = new("Updating ...");
 
-        private readonly AsyncLoader _ignoredFilesLoader = new AsyncLoader();
+        private readonly AsyncLoader _ignoredFilesLoader = new();
         private readonly IFullPathResolver _fullPathResolver;
         private readonly bool _localExclude;
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormAddToGitIgnore()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -46,7 +49,7 @@ namespace GitUI.CommandsDialogs
             _fullPathResolver = new FullPathResolver(() => Module.WorkingDir);
         }
 
-        private string ExcludeFile
+        private string? ExcludeFile
         {
             get
             {
@@ -73,9 +76,10 @@ namespace GitUI.CommandsDialogs
             try
             {
                 var fileName = ExcludeFile;
+                Validates.NotNull(fileName);
                 FileInfoExtensions.MakeFileTemporaryWritable(fileName, x =>
                 {
-                    var gitIgnoreFileAddition = new StringBuilder();
+                    StringBuilder gitIgnoreFileAddition = new();
 
                     if (File.Exists(fileName) && !File.ReadAllText(fileName, GitModule.SystemEncoding).EndsWith(Environment.NewLine))
                     {
@@ -94,7 +98,7 @@ namespace GitUI.CommandsDialogs
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.ToString(), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, ex.ToString(), TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             Close();

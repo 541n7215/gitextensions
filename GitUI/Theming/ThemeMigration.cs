@@ -11,7 +11,7 @@ namespace GitUI.Theming
     internal class ThemeMigration
     {
         private readonly ThemeRepository _repository;
-        private readonly ThemeId _migratedThemeId = new ThemeId("migrated", false);
+        private readonly ThemeId _migratedThemeId = new("migrated", false);
         private readonly ThemeId[] _themeIds;
 
         public ThemeMigration(ThemeRepository repository)
@@ -49,7 +49,7 @@ namespace GitUI.Theming
                 return;
             }
 
-            var migratedTheme = new Theme(
+            Theme migratedTheme = new(
                 Theme.AppColorNames.ToDictionary(name => name, AppSettings.GetColor),
                 new Dictionary<KnownColor, Color>(),
                 _migratedThemeId);

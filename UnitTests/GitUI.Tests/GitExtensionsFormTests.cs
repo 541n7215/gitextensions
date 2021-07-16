@@ -25,7 +25,7 @@ namespace GitUITests
         [Test]
         public void RestorePosition_should_not_restore_position_if_not_required()
         {
-            using var form = new MockForm(false)
+            using MockForm form = new(false)
             {
                 Location = new Point(-100, -100),
                 Size = new Size(500, 500)
@@ -43,7 +43,7 @@ namespace GitUITests
         [Test]
         public void RestorePosition_should_not_restore_position_if_minimised()
         {
-            using var form = new MockForm(false)
+            using MockForm form = new(false)
             {
                 Location = new Point(-100, -100),
                 Size = new Size(500, 500),
@@ -63,7 +63,7 @@ namespace GitUITests
         [Test]
         public void RestorePosition_should_not_restore_position_if_not_persisted()
         {
-            using var form = new MockForm(true)
+            using MockForm form = new(true)
             {
                 Location = new Point(-100, -100),
                 Size = new Size(500, 500)
@@ -88,7 +88,7 @@ namespace GitUITests
         [TestCase(FormBorderStyle.None)]
         public void RestorePosition_should_not_scale_fixed_window_if_different_dpi(FormBorderStyle borderStyle)
         {
-            using var form = new MockForm(true)
+            using MockForm form = new(true)
             {
                 Location = new Point(-100, -100),
                 Size = new Size(300, 300),
@@ -124,7 +124,7 @@ namespace GitUITests
                 Assert.Inconclusive("The test must be run at 96dpi");
             }
 
-            using var form = new MockForm(true)
+            using MockForm form = new(true)
             {
                 Location = new Point(-100, -100),
                 Size = new Size(300, 300),
@@ -150,7 +150,7 @@ namespace GitUITests
 
         [TestCase(-1000, 100, /* -1000 + (800 - 300)/2 */ -750, /* 100 + (600-200)/2 */300)]
         [TestCase(0, 0, /* 0 + (800 - 300)/2 */ 250, /* 0 + (600-200)/2 */200)]
-        [TestCase(1000, -400, /* 1000 + (800 - 300)/2 */ 1250, /* -400 + (600-200)/2 */ -200)]
+        [TestCase(1000, -400, /* falls off the screen */ 0, /* falls off the screen */ 0)]
         public void RestorePosition_should_position_window_with_Owner_set_and_CenterParent(int ownerFormTop, int ownerFormLeft, int expectFormTop, int expectedFormLeft)
         {
             if (DpiUtil.IsNonStandard)
@@ -158,12 +158,12 @@ namespace GitUITests
                 Assert.Inconclusive("The test must be run at 96dpi");
             }
 
-            using var owner = new Form
+            using Form owner = new()
             {
                 Location = new Point(ownerFormTop, ownerFormLeft),
                 Size = new Size(800, 600)
             };
-            using var form = new MockForm(true)
+            using MockForm form = new(true)
             {
                 Owner = owner,
                 StartPosition = FormStartPosition.CenterParent

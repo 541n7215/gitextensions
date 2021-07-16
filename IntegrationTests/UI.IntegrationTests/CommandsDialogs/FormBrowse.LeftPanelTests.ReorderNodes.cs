@@ -6,11 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using CommonTestUtils;
+using CommonTestUtils.MEF;
 using FluentAssertions;
 using GitCommands;
 using GitUI;
 using GitUI.BranchTreePanel;
 using GitUI.CommandsDialogs;
+using GitUIPluginInterfaces;
+using Microsoft.VisualStudio.Composition;
 using NUnit.Framework;
 
 namespace GitExtensions.UITests.CommandsDialogs
@@ -20,18 +23,28 @@ namespace GitExtensions.UITests.CommandsDialogs
     public class FormBrowse_LeftPanel_ReorderNodesTest
     {
         // Created once for each test
+        private TestComposition _composition;
         private GitUICommands _commands;
+
+        // Track the original setting value
         private bool _originalShowAuthorAvatarColumn;
-        private List<bool> _originalRepoObjectsTreeShow = new List<bool>();
+        private bool _showAvailableDiffTools;
+
+        private List<bool> _originalRepoObjectsTreeShow = new();
 
         private GitModuleTestHelper _repo1;
 
         [OneTimeSetUp]
         public void SetUpFixture()
         {
+            // Remember the current settings...
             _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+            _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
 
-            // we don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+            // Stop loading custom diff tools
+            AppSettings.ShowAvailableDiffTools = false;
+
+            // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
             AppSettings.ShowAuthorAvatarColumn = false;
 
             // Show all root nodes for test, restore when done
@@ -43,12 +56,18 @@ namespace GitExtensions.UITests.CommandsDialogs
             AppSettings.RepoObjectsTreeShowRemotes = true;
             AppSettings.RepoObjectsTreeShowTags = true;
             AppSettings.RepoObjectsTreeShowSubmodules = true;
+
+            _composition = TestComposition.Empty
+                .AddParts(typeof(MockWindowsJumpListManager))
+                .AddParts(typeof(MockRepositoryDescriptionProvider))
+                .AddParts(typeof(MockAppTitleGenerator));
         }
 
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
             AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+            AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
 
             AppSettings.RepoObjectsTreeShowBranches = _originalRepoObjectsTreeShow[0];
             AppSettings.RepoObjectsTreeShowRemotes = _originalRepoObjectsTreeShow[1];
@@ -61,6 +80,9 @@ namespace GitExtensions.UITests.CommandsDialogs
         {
             _repo1 = new GitModuleTestHelper("repo1");
             _commands = new GitUICommands(_repo1.Module);
+
+            ExportProvider mefExportProvider = _composition.ExportProviderFactory.CreateExportProvider();
+            ManagedExtensibility.SetTestExportProvider(mefExportProvider);
         }
 
         [TearDown]

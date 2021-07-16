@@ -195,24 +195,15 @@ namespace GitUI.Theming
                 new Point(x3, y1)
             };
 
-            Color arrowColor;
-            switch (stateid)
+            Color arrowColor = stateid switch
             {
-                case State.DropDown.CBXS_DISABLED:
-                    arrowColor = SystemColors.ControlDark;
-                    break;
-
-                // case State.DropDown.CBXS_NORMAL:
-                // case State.DropDown.CBXS_HOT:
-                // case State.DropDown.CBXS_PRESSED:
-                default:
-                    arrowColor = SystemColors.ControlDarkDark;
-                    break;
-            }
+                State.DropDown.CBXS_DISABLED => SystemColors.ControlDark,
+                _ => SystemColors.ControlDarkDark
+            };
 
             using (ctx.HighQuality())
             {
-                using var pen = new Pen(arrowColor, DpiUtil.Scale(2));
+                using Pen pen = new(arrowColor, DpiUtil.Scale(2));
                 ctx.Graphics.DrawLines(pen, arrowPoints);
             }
         }

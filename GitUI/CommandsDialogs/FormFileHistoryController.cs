@@ -1,8 +1,9 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using GitCommands.Utils;
-using JetBrains.Annotations;
+using Microsoft;
 
 namespace GitUI.CommandsDialogs
 {
@@ -18,10 +19,7 @@ namespace GitUI.CommandsDialogs
         /// This supports drive-lettered paths and UNC paths, but a UNC root
         /// will be returned in lowercase (e.g., \\server\share).
         /// </remarks>
-        [ContractAnnotation("=>false,exactPath:null")]
-        [ContractAnnotation("=>true,exactPath:notnull")]
-        [ContractAnnotation("path:null=>false,exactPath:null")]
-        public bool TryGetExactPath(string path, out string exactPath)
+        public bool TryGetExactPath(string? path, [NotNullWhen(returnValue: true)] out string? exactPath)
         {
             if (!File.Exists(path) && !Directory.Exists(path))
             {
@@ -29,17 +27,19 @@ namespace GitUI.CommandsDialogs
                 return false;
             }
 
+            Validates.NotNull(path);
+
             // The section below contains native windows (kernel32) calls
             // and breaks on Linux. Only use it on Windows. Casing is only
             // a Windows problem anyway.
             if (EnvUtils.RunningOnWindows())
             {
                 // grab the 8.3 file path
-                var shortPath = new StringBuilder(4096);
+                StringBuilder shortPath = new(4096);
                 if (NativeMethods.GetShortPathNameW(path, shortPath, shortPath.Capacity) > 0)
                 {
                     // use 8.3 file path to get properly cased full file path
-                    var longPath = new StringBuilder(4096);
+                    StringBuilder longPath = new(4096);
                     if (NativeMethods.GetLongPathNameW(shortPath.ToString(), longPath, longPath.Capacity) > 0)
                     {
                         exactPath = longPath.ToString();

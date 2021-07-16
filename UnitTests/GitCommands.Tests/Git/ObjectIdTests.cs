@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
-using GitCommands;
 using GitUIPluginInterfaces;
 using JetBrains.Annotations;
 using NUnit.Framework;
@@ -270,7 +268,7 @@ namespace GitCommandsTests.Git
         public void TryParseAsciiHexBytes_returns_false_when_bounds_check_fails()
         {
             var bytes = new byte[ObjectId.Sha1CharCount];
-            var segment = new ArraySegment<byte>(bytes);
+            ArraySegment<byte> segment = new(bytes);
 
             Assert.False(ObjectId.TryParseAsciiHexBytes(segment, -1, out ObjectId objectId));
             Assert.Null(objectId);
@@ -279,7 +277,6 @@ namespace GitCommandsTests.Git
         }
 
         [Test]
-        [SuppressMessage("ReSharper", "ReturnValueOfPureMethodIsNotUsed")]
         public void ToShortString()
         {
             const string s = "0102030405060708091011121314151617181920";

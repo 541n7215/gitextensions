@@ -11,19 +11,6 @@ namespace GitUI.CommitInfo
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components is not null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
         #region Component Designer generated code
 
         /// <summary> 
@@ -82,8 +69,8 @@ namespace GitUI.CommitInfo
                 | System.Windows.Forms.AnchorStyles.Right)));
             this.pnlCommitMessage.BackColor = System.Drawing.SystemColors.Control;
             this.pnlCommitMessage.Controls.Add(this.rtbxCommitMessage);
-            this.pnlCommitMessage.Location = new System.Drawing.Point(8, 112);
-            this.pnlCommitMessage.Margin = new System.Windows.Forms.Padding(8, 0, 8, 0);
+            this.pnlCommitMessage.Location = new System.Drawing.Point(0, 112);
+            this.pnlCommitMessage.Margin = new System.Windows.Forms.Padding(0);
             this.pnlCommitMessage.Name = "pnlCommitMessage";
             this.pnlCommitMessage.Size = new System.Drawing.Size(456, 36);
             this.pnlCommitMessage.TabIndex = 0;

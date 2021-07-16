@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
@@ -14,14 +15,16 @@ namespace GitUI.UserControls.RevisionGrid.Columns
     {
         private readonly RevisionDataGridView _revisionGridView;
         private readonly IAvatarProvider _avatarProvider;
+        private readonly IAvatarCacheCleaner _avatarCacheCleaner;
 
-        public AvatarColumnProvider(RevisionDataGridView revisionGridView, IAvatarProvider avatarProvider)
+        public AvatarColumnProvider(RevisionDataGridView revisionGridView, IAvatarProvider avatarProvider, IAvatarCacheCleaner avatarCacheCleaner)
             : base("Avatar")
         {
             _revisionGridView = revisionGridView;
             _avatarProvider = avatarProvider;
+            _avatarCacheCleaner = avatarCacheCleaner;
 
-            _avatarProvider.CacheCleared += _revisionGridView.Invalidate;
+            _avatarCacheCleaner.CacheCleared += (sender, args) => _revisionGridView.Invalidate();
 
             Column = new DataGridViewTextBoxColumn
             {
@@ -39,7 +42,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
 
         public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
         {
-            if (revision.IsArtificial)
+            if (revision.IsArtificial || revision.AuthorEmail is null)
             {
                 return;
             }
@@ -49,14 +52,14 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             var padding = DpiUtil.Scale(2);
             var imageSize = e.CellBounds.Height - padding - padding;
 
-            Image image;
+            Image? image;
             var imageTask = _avatarProvider.GetAvatarAsync(revision.AuthorEmail, revision.Author, imageSize);
 
             if (imageTask.Status == TaskStatus.RanToCompletion)
             {
-                #pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
                 image = imageTask.Result;
-                #pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
             }
             else
             {
@@ -75,7 +78,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
                     .FileAndForget();
             }
 
-            var rect = new Rectangle(
+            Rectangle rect = new(
                 e.CellBounds.Left + padding,
                 e.CellBounds.Top + padding,
                 imageSize,
@@ -99,7 +102,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             e.Graphics.FillRectangle(style.BackBrush, rect.Right - 1, rect.Bottom - 2, 1, 2);
         }
 
-        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, out string toolTip)
+        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
         {
             if (revision.ObjectId.IsArtificial)
             {

@@ -1,12 +1,10 @@
 using System;
-using GitExtensions;
+using System.IO;
 
 namespace GitCommands
 {
     public static class GitSshHelpers
     {
-        private static readonly ISshPathLocator _sshPathLocatorInstance = new SshPathLocator();
-
         public static bool UseSsh(string arguments)
         {
             var x = !Plink() && DoArgumentsRequireSsh();
@@ -26,26 +24,19 @@ namespace GitCommands
             }
         }
 
-        /// <summary>Un-sets the git SSH command path.</summary>
-        public static void UnsetSsh()
-        {
-            Environment.SetEnvironmentVariable("GIT_SSH", "", EnvironmentVariableTarget.Process);
-        }
-
         /// <summary>Sets the git SSH command path.</summary>
-        public static void SetSsh(string? path)
+        public static void SetSsh(string path)
         {
-            if (!Strings.IsNullOrEmpty(path))
+            // Git will use the embedded OpenSSH ssh.exe if empty/unset
+            if (!string.IsNullOrEmpty(path) && !File.Exists(path))
             {
-                Environment.SetEnvironmentVariable("GIT_SSH", path, EnvironmentVariableTarget.Process);
+                path = "";
             }
+
+            Environment.SetEnvironmentVariable("GIT_SSH", path, EnvironmentVariableTarget.Process);
         }
 
         public static bool Plink()
-        {
-            var sshString = _sshPathLocatorInstance.Find(AppSettings.GitBinDir);
-
-            return sshString.EndsWith("plink.exe", StringComparison.CurrentCultureIgnoreCase);
-        }
+            => AppSettings.SshPath.EndsWith("plink.exe", StringComparison.CurrentCultureIgnoreCase);
     }
 }

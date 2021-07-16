@@ -2,13 +2,14 @@
 using System.Text;
 using System.Threading.Tasks;
 using GitUIPluginInterfaces;
+using Microsoft;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitCommands
 {
     /// <summary>
-    /// Status if the file can be staged (worktree->index), unstaged or None (normal commits)
-    /// The status may not be available or unset for some commands
+    /// Status if the file can be staged (worktree->index), unstaged or None (normal commits).
+    /// The status may not be available or unset for some commands.
     /// </summary>
     public enum StagedStatus
     {
@@ -46,7 +47,13 @@ namespace GitCommands
 
         private Flags _flags;
 
-        public string? Name { get; set; }
+        public GitItemStatus(string name)
+        {
+            Requires.NotNull(name, nameof(name));
+            Name = name;
+        }
+
+        public string Name { get; set; }
         public string? OldName { get; set; }
         public string? ErrorMessage { get; set; }
         public ObjectId? TreeGuid { get; set; }
@@ -58,91 +65,91 @@ namespace GitCommands
 
         public bool IsTracked
         {
-            get => _flags.HasFlag(Flags.IsTracked);
+            get => HasFlag(Flags.IsTracked);
             set => SetFlag(value, Flags.IsTracked);
         }
 
         public bool IsDeleted
         {
-            get => _flags.HasFlag(Flags.IsDeleted);
+            get => HasFlag(Flags.IsDeleted);
             set => SetFlag(value, Flags.IsDeleted);
         }
 
         /// <summary>
         /// For files, the file is modified
-        /// For submodules, the commit is changed
+        /// For submodules, the commit is changed.
         /// </summary>
         public bool IsChanged
         {
-            get => _flags.HasFlag(Flags.IsChanged);
+            get => HasFlag(Flags.IsChanged);
             set => SetFlag(value, Flags.IsChanged);
         }
 
         public bool IsNew
         {
-            get => _flags.HasFlag(Flags.IsNew);
+            get => HasFlag(Flags.IsNew);
             set => SetFlag(value, Flags.IsNew);
         }
 
         public bool IsIgnored
         {
-            get => _flags.HasFlag(Flags.IsIgnored);
+            get => HasFlag(Flags.IsIgnored);
             set => SetFlag(value, Flags.IsIgnored);
         }
 
         public bool IsRenamed
         {
-            get => _flags.HasFlag(Flags.IsRenamed);
+            get => HasFlag(Flags.IsRenamed);
             set => SetFlag(value, Flags.IsRenamed);
         }
 
         public bool IsCopied
         {
-            get => _flags.HasFlag(Flags.IsCopied);
+            get => HasFlag(Flags.IsCopied);
             set => SetFlag(value, Flags.IsCopied);
         }
 
         public bool IsConflict
         {
-            get => _flags.HasFlag(Flags.IsConflict);
+            get => HasFlag(Flags.IsConflict);
             set => SetFlag(value, Flags.IsConflict);
         }
 
         public bool IsAssumeUnchanged
         {
-            get => _flags.HasFlag(Flags.IsAssumeUnchanged);
+            get => HasFlag(Flags.IsAssumeUnchanged);
             set => SetFlag(value, Flags.IsAssumeUnchanged);
         }
 
         public bool IsSkipWorktree
         {
-            get => _flags.HasFlag(Flags.IsSkipWorktree);
+            get => HasFlag(Flags.IsSkipWorktree);
             set => SetFlag(value, Flags.IsSkipWorktree);
         }
 
         public bool IsSubmodule
         {
-            get => _flags.HasFlag(Flags.IsSubmodule);
+            get => HasFlag(Flags.IsSubmodule);
             set => SetFlag(value, Flags.IsSubmodule);
         }
 
         /// <summary>
         /// Submodule is dirty
-        /// Info from git-status, may be available before GetSubmoduleStatusAsync is evaluated
+        /// Info from git-status, may be available before GetSubmoduleStatusAsync is evaluated.
         /// </summary>
         public bool IsDirty
         {
-            get => _flags.HasFlag(Flags.IsDirty);
+            get => HasFlag(Flags.IsDirty);
             set => SetFlag(value, Flags.IsDirty);
         }
 
         /// <remarks>
         /// This item is not a Git item, just status information
-        /// If ErrorMessage is set, this is an error from Git, otherwise just a marker that nothing is changed
+        /// If ErrorMessage is set, this is an error from Git, otherwise just a marker that nothing is changed.
         /// </remarks>
         public bool IsStatusOnly
         {
-            get => _flags.HasFlag(Flags.IsStatusOnly);
+            get => HasFlag(Flags.IsStatusOnly);
             set => SetFlag(value, Flags.IsStatusOnly);
         }
 
@@ -152,8 +159,14 @@ namespace GitCommands
         /// </remarks>
         public bool IsRangeDiff
         {
-            get => _flags.HasFlag(Flags.IsRangeDiff);
+            get => HasFlag(Flags.IsRangeDiff);
             set => SetFlag(value, Flags.IsRangeDiff);
+        }
+
+        private bool HasFlag(Flags flags)
+        {
+            // NOTE Enum.HasFlag boxes its argument
+            return (flags & _flags) == flags;
         }
 
         private void SetFlag(bool isSet, Flags flag)
@@ -170,6 +183,14 @@ namespace GitCommands
 
         #endregion
 
+        /// <summary>
+        /// Gets a task whose result is the submodule status.
+        /// </summary>
+        /// <returns>
+        /// A null task when <see cref="SetSubmoduleStatus"/> has not been called on this object, or
+        /// a task whose result is the status. The task may also return null if the status could not be
+        /// determined.
+        /// </returns>
         public Task<GitSubmoduleStatus?>? GetSubmoduleStatusAsync()
         {
             return _submoduleStatus?.JoinAsync();
@@ -194,7 +215,7 @@ namespace GitCommands
 
         public override string ToString()
         {
-            var str = new StringBuilder();
+            StringBuilder str = new();
 
             if (!string.IsNullOrWhiteSpace(ErrorMessage))
             {

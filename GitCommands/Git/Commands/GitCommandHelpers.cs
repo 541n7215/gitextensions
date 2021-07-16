@@ -69,55 +69,41 @@ namespace GitCommands.Git.Commands
                         ? (ArgumentString)"--no-optional-locks"
                         : default)
                 {
-                    "--no-color",
-                    { staged, "-M -C --cached" },
-                    extraDiffArguments,
+                    "--find-renames",
+                    "--find-copies",
                     { AppSettings.UseHistogramDiffAlgorithm, "--histogram" },
+                    extraDiffArguments,
+                    { staged, "--cached" },
                     "--",
                     fileName.ToPosixPath().Quote(),
                     { staged, oldFileName?.ToPosixPath().Quote() }
                 };
         }
 
-        public static ArgumentString GetRefsCmd(bool tags, bool branches, bool noLocks, GitRefsSortBy sortBy, GitRefsSortOrder sortOrder)
+        public static ArgumentString GetRefsCmd(RefsFilter getRef, bool noLocks, GitRefsSortBy sortBy, GitRefsSortOrder sortOrder, int count = 0)
         {
-            string format;
-            if (!tags)
-            {
-                // If we don't need tags, it is easy.
-                format = @"--format=""%(objectname) %(refname)""";
-            }
-            else
-            {
-                // ...however, if we're interested in tags, tags may be simple (in which case they are point to commits directly),
-                // or "dereferences" (i.e. commits that contian metadata and point to other commits, "^{}").
-                // Derefence commits do not contain date information, so we need to find information from the referenced commits (those with '*').
-                // So the following format is as follows:
-                //      If (there is a 'authordate' information, then this is a simple tag/direct commit)
-                //      Then
-                //          format = %(objectname) %(refname)
-                //      Else
-                //          format = %(*objectname) %(*refname) // i.e. info from a referenced commit
-                //      End
-                format = @"--format=""%(if)%(authordate)%(then)%(objectname) %(refname)%(else)%(*objectname) %(*refname)%(end)""";
-            }
+            bool hasTags = (getRef == RefsFilter.NoFilter) || (getRef & RefsFilter.Tags) != 0;
 
-            GitArgumentBuilder cmd = new GitArgumentBuilder("for-each-ref",
+            GitArgumentBuilder cmd = new("for-each-ref",
                 gitOptions: noLocks && GitVersion.Current.SupportNoOptionalLocks
                     ? (ArgumentString)"--no-optional-locks"
                     : default)
             {
-                { sortBy != GitRefsSortBy.Default, GetSortCriteria(tags, sortBy, sortOrder), string.Empty },
-                format,
-                { branches, "refs/heads/", string.Empty },
-                { branches && tags, "refs/remotes/", string.Empty },
-                { tags, "refs/tags/", string.Empty },
+                SortCriteria(hasTags, sortBy, sortOrder),
+                GitRefsFormat(hasTags),
+                { count > 0, $"--count={count}" },
+                GitRefsPattern(getRef)
             };
 
             return cmd;
 
-            static string GetSortCriteria(bool needTags, GitRefsSortBy sortBy, GitRefsSortOrder sortOrder)
+            static ArgumentString SortCriteria(bool needTags, GitRefsSortBy sortBy, GitRefsSortOrder sortOrder)
             {
+                if (sortBy == GitRefsSortBy.Default)
+                {
+                    return string.Empty;
+                }
+
                 if (!GitVersion.Current.SupportRefSort)
                 {
                     return string.Empty;
@@ -139,6 +125,43 @@ namespace GitCommands.Git.Commands
                 // greater of two evils.
                 // Refer to https://github.com/gitextensions/gitextensions/issues/8621 for more info.
                 return $"--sort={order}*{sortBy} --sort={order}{sortBy}";
+            }
+
+            static ArgumentString GitRefsFormat(bool needTags)
+            {
+                if (!needTags)
+                {
+                    // If we don't need tags, it is easy.
+                    return @"--format=""%(objectname) %(refname)""";
+                }
+
+                // ...however, if we're interested in tags, tags may be simple (in which case they are point to commits directly),
+                // or "dereferences" (i.e. commits that contain metadata and point to other commits, "^{}").
+                // Dereference commits do not contain date information, so we need to find information from the referenced commits (those with '*').
+                // So the following format is as follows:
+                //      If (there is a 'authordate' information, then this is a simple tag/direct commit)
+                //      Then
+                //          format = %(objectname) %(refname)
+                //      Else
+                //          format = %(*objectname) %(*refname) // i.e. info from a referenced commit
+                //      End
+                return @"--format=""%(if)%(authordate)%(then)%(objectname) %(refname)%(else)%(*objectname) %(*refname)%(end)""";
+            }
+
+            static ArgumentString GitRefsPattern(RefsFilter option)
+            {
+                if (option == RefsFilter.NoFilter)
+                {
+                    // Include all refs/
+                    return string.Empty;
+                }
+
+                ArgumentBuilder builder = new();
+                builder.Add((option & RefsFilter.Heads) != 0, "refs/heads/");
+                builder.Add((option & RefsFilter.Remotes) != 0, "refs/remotes/");
+                builder.Add((option & RefsFilter.Tags) != 0, "refs/tags/");
+
+                return builder;
             }
         }
 
@@ -179,16 +202,15 @@ namespace GitCommands.Git.Commands
         /// Push a local reference to a new commit
         /// This is similar to "git branch --force "branch" "commit", except that you get a warning if commits are lost.
         /// </summary>
-        /// <param name="repoPath">Full path to the repo.</param>
         /// <param name="gitRef">The branch to move.</param>
         /// <param name="targetId">The commit to move to.</param>
         /// <param name="force">Push the reference also if commits are lost.</param>
         /// <returns>The Git command to execute.</returns>
-        public static ArgumentString PushLocalCmd(string repoPath, string gitRef, ObjectId targetId, bool force = false)
+        public static ArgumentString PushLocalCmd(string gitRef, ObjectId targetId, bool force = false)
         {
             return new GitArgumentBuilder("push")
             {
-                $"file://{repoPath}".RemoveTrailingPathSeparator().QuoteNE(),
+                ".",
                 $"{targetId}:{gitRef}".QuoteNE(),
                 { force, "--force" }
             };
@@ -315,44 +337,9 @@ namespace GitCommands.Git.Commands
             };
         }
 
-        public static ArgumentString GetSortedRefsCommand(bool noLocks = false)
+        public static ArgumentString StashSaveCmd(bool untracked, bool keepIndex, string message, IReadOnlyList<string>? selectedFiles)
         {
-            if (AppSettings.ShowSuperprojectRemoteBranches)
-            {
-                return new GitArgumentBuilder("for-each-ref", gitOptions:
-                    noLocks && GitVersion.Current.SupportNoOptionalLocks
-                        ? (ArgumentString)"--no-optional-locks"
-                        : default)
-                {
-                    "--sort=-committerdate",
-                    "--format=\"%(objectname) %(refname)\"",
-                    "refs/"
-                };
-            }
-
-            if (AppSettings.ShowSuperprojectBranches || AppSettings.ShowSuperprojectTags)
-            {
-                return new GitArgumentBuilder("for-each-ref", gitOptions:
-                    noLocks && GitVersion.Current.SupportNoOptionalLocks
-                        ? (ArgumentString)"--no-optional-locks"
-                        : default)
-                {
-                    "--sort=-committerdate",
-                    "--format=\"%(objectname) %(refname)\"",
-                    { AppSettings.ShowSuperprojectBranches, "refs/heads/" },
-                    { AppSettings.ShowSuperprojectTags, " refs/tags/" }
-                };
-            }
-
-            return "";
-        }
-
-        public static ArgumentString StashSaveCmd(bool untracked, bool keepIndex, string message, IReadOnlyList<string> selectedFiles)
-        {
-            if (selectedFiles is null)
-            {
-                selectedFiles = Array.Empty<string>();
-            }
+            selectedFiles ??= Array.Empty<string>();
 
             var isPartialStash = selectedFiles.Any();
 
@@ -408,14 +395,16 @@ namespace GitCommands.Git.Commands
         }
 
         public static ArgumentString RebaseCmd(
-            string branch, bool interactive, bool preserveMerges, bool autosquash, bool autoStash, bool ignoreDate, bool committerDateIsAuthorDate, string? from = null, string? onto = null)
+            string? branch, bool interactive, bool preserveMerges, bool autosquash, bool autoStash, bool ignoreDate, bool committerDateIsAuthorDate, string? from = null, string? onto = null)
         {
+            // TODO-NULLABLE does it make sense for 'branch' to be null here?
+
             if (from is null ^ onto is null)
             {
                 throw new ArgumentException($"For arguments \"{nameof(from)}\" and \"{nameof(onto)}\", either both must have values, or neither may.");
             }
 
-            var builder = new GitArgumentBuilder("rebase");
+            GitArgumentBuilder builder = new("rebase");
             if (ignoreDate)
             {
                 builder.Add("--ignore-date");
@@ -518,7 +507,7 @@ namespace GitCommands.Git.Commands
 
         public static ArgumentString GetAllChangedFilesCmd(bool excludeIgnoredFiles, UntrackedFilesMode untrackedFiles, IgnoreSubmodulesMode ignoreSubmodules = IgnoreSubmodulesMode.None, bool noLocks = false)
         {
-            var args = new GitArgumentBuilder("status", gitOptions:
+            GitArgumentBuilder args = new("status", gitOptions:
                 noLocks && GitVersion.Current.SupportNoOptionalLocks
                     ? (ArgumentString)"--no-optional-locks"
                     : default)
@@ -537,7 +526,7 @@ namespace GitCommands.Git.Commands
             return args;
         }
 
-        public static ArgumentString MergeBranchCmd(string branch, bool allowFastForward, bool squash, bool noCommit, string strategy, bool allowUnrelatedHistories, string mergeCommitFilePath, int? log)
+        public static ArgumentString MergeBranchCmd(string branch, bool allowFastForward, bool squash, bool noCommit, string strategy, bool allowUnrelatedHistories, string? mergeCommitFilePath, int? log)
         {
             return new GitArgumentBuilder("merge")
             {

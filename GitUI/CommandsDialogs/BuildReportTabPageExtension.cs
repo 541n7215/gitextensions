@@ -6,11 +6,11 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using GitCommands;
 using GitCommands.Settings;
 using GitUI.UserControls;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
+using GitUIPluginInterfaces.Settings;
+using Microsoft;
 
 namespace GitUI.CommandsDialogs
 {
@@ -20,13 +20,13 @@ namespace GitUI.CommandsDialogs
         private readonly string _caption;
         private readonly Func<IGitModule> _getModule;
 
-        private TabPage _buildReportTabPage;
-        private WebBrowserControl _buildReportWebBrowser;
-        private GitRevision _selectedGitRevision;
-        private string _url;
-        private readonly LinkLabel _openReportLink = new LinkLabel { AutoSize = false, Text = Strings.OpenReport, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+        private TabPage? _buildReportTabPage;
+        private WebBrowserControl? _buildReportWebBrowser;
+        private GitRevision? _selectedGitRevision;
+        private string? _url;
+        private readonly LinkLabel _openReportLink = new() { AutoSize = false, Text = TranslatedStrings.OpenReport, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
 
-        public Control Control { get; private set; } // for focusing
+        public Control? Control { get; private set; } // for focusing
 
         public BuildReportTabPageExtension(Func<IGitModule> getModule, TabControl tabControl, string caption)
         {
@@ -44,7 +44,7 @@ namespace GitUI.CommandsDialogs
             _openReportLink.Font = new Font(_openReportLink.Font.Name, 16F);
         }
 
-        public void FillBuildReport([CanBeNull] GitRevision revision)
+        public void FillBuildReport(GitRevision? revision)
         {
             SetSelectedRevision(revision);
 
@@ -57,9 +57,12 @@ namespace GitUI.CommandsDialogs
 
                 if (buildResultPageEnabled && buildInfoIsAvailable)
                 {
+                    Validates.NotNull(revision);
+
                     if (_buildReportTabPage is null)
                     {
                         CreateBuildReportTabPage(_tabControl);
+                        Validates.NotNull(_buildReportTabPage);
                     }
 
                     _buildReportTabPage.Controls.Clear();
@@ -96,9 +99,11 @@ namespace GitUI.CommandsDialogs
 
         private void LoadReportContent(GitRevision revision, bool isFavIconMissing)
         {
+            Validates.NotNull(_buildReportWebBrowser);
+
             try
             {
-                if (revision.BuildStatus.ShowInBuildReportTab)
+                if (revision.BuildStatus?.ShowInBuildReportTab == true)
                 {
                     _buildReportWebBrowser.Navigate(revision.BuildStatus.Url);
                 }
@@ -116,7 +121,9 @@ namespace GitUI.CommandsDialogs
 
         private void SetTabPageContent(GitRevision revision)
         {
-            if (revision.BuildStatus.ShowInBuildReportTab)
+            Validates.NotNull(_buildReportTabPage);
+
+            if (revision.BuildStatus?.ShowInBuildReportTab == true)
             {
                 _url = null;
                 Control = _buildReportWebBrowser;
@@ -124,14 +131,14 @@ namespace GitUI.CommandsDialogs
             }
             else
             {
-                _url = revision.BuildStatus.Url;
+                _url = revision.BuildStatus?.Url;
                 _buildReportTabPage.Cursor = Cursors.Hand;
                 Control = _openReportLink;
                 _buildReportTabPage.Controls.Add(_openReportLink);
             }
         }
 
-        private void SetSelectedRevision(GitRevision revision)
+        private void SetSelectedRevision(GitRevision? revision)
         {
             if (_selectedGitRevision is not null)
             {
@@ -174,6 +181,9 @@ namespace GitUI.CommandsDialogs
         private void BuildReportWebBrowserOnNavigated(object sender,
                                                       WebBrowserNavigatedEventArgs webBrowserNavigatedEventArgs)
         {
+            Validates.NotNull(_buildReportWebBrowser);
+            Validates.NotNull(_buildReportTabPage);
+
             _buildReportWebBrowser.Navigated -= BuildReportWebBrowserOnNavigated;
 
             var favIconUrl = DetermineFavIconUrl(_buildReportWebBrowser.Document);
@@ -183,29 +193,27 @@ namespace GitUI.CommandsDialogs
                 ThreadHelper.JoinableTaskFactory.RunAsync(
                     async () =>
                     {
-                        using (var imageStream = await DownloadRemoteImageFileAsync(favIconUrl))
+                        using var imageStream = await DownloadRemoteImageFileAsync(favIconUrl);
+                        if (imageStream is not null)
                         {
-                            if (imageStream is not null)
+                            await _tabControl.SwitchToMainThreadAsync();
+
+                            var favIconImage = Image.FromStream(imageStream)
+                                                    .GetThumbnailImage(16, 16, null, IntPtr.Zero);
+                            var imageCollection = _tabControl.ImageList.Images;
+                            var imageIndex = _buildReportTabPage.ImageIndex;
+
+                            if (imageIndex < 0)
                             {
-                                await _tabControl.SwitchToMainThreadAsync();
-
-                                var favIconImage = Image.FromStream(imageStream)
-                                                        .GetThumbnailImage(16, 16, null, IntPtr.Zero);
-                                var imageCollection = _tabControl.ImageList.Images;
-                                var imageIndex = _buildReportTabPage.ImageIndex;
-
-                                if (imageIndex < 0)
-                                {
-                                    _buildReportTabPage.ImageIndex = imageCollection.Count;
-                                    imageCollection.Add(favIconImage);
-                                }
-                                else
-                                {
-                                    imageCollection[imageIndex] = favIconImage;
-                                }
-
-                                _tabControl.Invalidate(false);
+                                _buildReportTabPage.ImageIndex = imageCollection.Count;
+                                imageCollection.Add(favIconImage);
                             }
+                            else
+                            {
+                                imageCollection[imageIndex] = favIconImage;
+                            }
+
+                            _tabControl.Invalidate(false);
                         }
                     });
             }
@@ -213,8 +221,11 @@ namespace GitUI.CommandsDialogs
 
         private bool IsBuildResultPageEnabled()
         {
-            var settings = GetModule().GetEffectiveSettings() as RepoDistSettings;
-            return settings?.BuildServer.ShowBuildResultPage.Value ?? false;
+            IBuildServerSettings buildServerSettings = GetModule()
+                .GetEffectiveSettings()
+                .BuildServer();
+
+            return buildServerSettings.ShowBuildResultPage;
         }
 
         private IGitModule GetModule()
@@ -229,8 +240,7 @@ namespace GitUI.CommandsDialogs
             return module;
         }
 
-        [CanBeNull]
-        private static string DetermineFavIconUrl(HtmlDocument htmlDocument)
+        private static string? DetermineFavIconUrl(HtmlDocument htmlDocument)
         {
             var links = htmlDocument.GetElementsByTagName("link");
             var favIconLink =
@@ -256,8 +266,7 @@ namespace GitUI.CommandsDialogs
             }
         }
 
-        [ItemCanBeNull]
-        private static async Task<Stream> DownloadRemoteImageFileAsync(string uri)
+        private static async Task<Stream?> DownloadRemoteImageFileAsync(string uri)
         {
             var request = (HttpWebRequest)WebRequest.Create(uri);
 

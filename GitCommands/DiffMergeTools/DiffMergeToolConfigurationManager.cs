@@ -3,23 +3,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using GitCommands.Config;
-using GitExtensions;
 using GitUIPluginInterfaces;
 
 namespace GitCommands.DiffMergeTools
 {
     public sealed class DiffMergeToolConfigurationManager
     {
-        private readonly Func<IConfigValueStore> _getFileSettings;
+        private readonly Func<IConfigValueStore?> _getFileSettings;
         private readonly Func<string, IEnumerable<string?>, string> _findFileInFolders;
 
-        public DiffMergeToolConfigurationManager(Func<IConfigValueStore> getFileSettings)
+        public DiffMergeToolConfigurationManager(Func<IConfigValueStore?> getFileSettings)
             : this(getFileSettings, PathUtil.FindInFolders)
         {
             _getFileSettings = getFileSettings;
         }
 
-        internal DiffMergeToolConfigurationManager(Func<IConfigValueStore> getFileSettings, Func<string, IEnumerable<string?>, string> findFileInFolders)
+        internal DiffMergeToolConfigurationManager(Func<IConfigValueStore?> getFileSettings, Func<string, IEnumerable<string?>, string> findFileInFolders)
         {
             _getFileSettings = getFileSettings;
             _findFileInFolders = findFileInFolders;
@@ -86,7 +85,7 @@ namespace GitCommands.DiffMergeTools
         /// <param name="toolName">The name of the diff/merge tool.</param>
         /// <param name="toolType">Type of the tool.</param>
         /// <returns>The command for the diff/merge tool configured in the effective config. </returns>
-        public string GetToolCommand(string toolName, DiffMergeToolType toolType)
+        public string GetToolCommand(string? toolName, DiffMergeToolType toolType)
         {
             if (string.IsNullOrWhiteSpace(toolName))
             {
@@ -94,19 +93,19 @@ namespace GitCommands.DiffMergeTools
             }
 
             var command = GetToolSetting(toolName, toolType, "cmd");
-            if (!Strings.IsNullOrWhiteSpace(command))
+            if (!string.IsNullOrWhiteSpace(command))
             {
                 return command;
             }
 
             var config = LoadDiffMergeToolConfig(toolName, null);
 
-            switch (toolType)
+            return toolType switch
             {
-                case DiffMergeToolType.Diff: return config.FullDiffCommand;
-                case DiffMergeToolType.Merge: return config.FullMergeCommand;
-                default: throw new NotSupportedException();
-            }
+                DiffMergeToolType.Diff => config.FullDiffCommand,
+                DiffMergeToolType.Merge => config.FullMergeCommand,
+                _ => throw new NotSupportedException()
+            };
         }
 
         /// <summary>
@@ -115,7 +114,7 @@ namespace GitCommands.DiffMergeTools
         /// <param name="toolName">The name of the diff/merge tool.</param>
         /// <param name="toolType">Type of the tool.</param>
         /// <returns>The path to the diff/merge tool configured in the effective config. </returns>
-        public string GetToolPath(string toolName, DiffMergeToolType toolType)
+        public string GetToolPath(string? toolName, DiffMergeToolType toolType)
         {
             if (string.IsNullOrWhiteSpace(toolName))
             {
@@ -123,7 +122,7 @@ namespace GitCommands.DiffMergeTools
             }
 
             var path = GetToolSetting(toolName, toolType, "path");
-            if (!Strings.IsNullOrWhiteSpace(path))
+            if (!string.IsNullOrWhiteSpace(path))
             {
                 return path;
             }
@@ -144,7 +143,7 @@ namespace GitCommands.DiffMergeTools
             if (diffTool is null)
             {
                 var exeName = toolName + ".exe";
-                if (!Strings.IsNullOrWhiteSpace(userSuppliedPath))
+                if (!string.IsNullOrWhiteSpace(userSuppliedPath))
                 {
                     fullPath = userSuppliedPath;
                 }
@@ -156,7 +155,7 @@ namespace GitCommands.DiffMergeTools
                 return new DiffMergeToolConfiguration(exeName, fullPath ?? string.Empty, null, null);
             }
 
-            if (!Strings.IsNullOrWhiteSpace(userSuppliedPath))
+            if (!string.IsNullOrWhiteSpace(userSuppliedPath))
             {
                 fullPath = userSuppliedPath;
             }
@@ -187,35 +186,31 @@ namespace GitCommands.DiffMergeTools
 
         private (string toolKey, string prefix) GetInfo(DiffMergeToolType toolType)
         {
-            switch (toolType)
+            return toolType switch
             {
-                case DiffMergeToolType.Diff:
-                    return (SettingKeyString.DiffToolKey, "difftool");
-
-                case DiffMergeToolType.Merge:
-                    return (SettingKeyString.MergeToolKey, "mergetool");
-
-                default: throw new NotSupportedException();
-            }
+                DiffMergeToolType.Diff => (SettingKeyString.DiffToolKey, "difftool"),
+                DiffMergeToolType.Merge => (SettingKeyString.MergeToolKey, "mergetool"),
+                _ => throw new NotSupportedException()
+            };
         }
 
         private string? GetToolSetting(string? toolName, DiffMergeToolType toolType, string settingSuffix)
         {
             (string toolKey, string prefix) = GetInfo(toolType);
 
-            if (Strings.IsNullOrWhiteSpace(toolName))
+            if (string.IsNullOrWhiteSpace(toolName))
             {
                 toolName = _getFileSettings()?.GetValue(toolKey);
             }
 
-            return Strings.IsNullOrWhiteSpace(toolName) ?
+            return string.IsNullOrWhiteSpace(toolName) ?
                 string.Empty :
                 _getFileSettings()?.GetValue(string.Concat(prefix, ".", toolName, ".", settingSuffix));
         }
 
         private static string? UnquoteString(string? str)
         {
-            if (Strings.IsNullOrEmpty(str))
+            if (string.IsNullOrEmpty(str))
             {
                 return str;
             }
@@ -230,7 +225,7 @@ namespace GitCommands.DiffMergeTools
         }
 
         internal TestAccessor GetTestAccessor()
-            => new TestAccessor(this);
+            => new(this);
 
         internal readonly struct TestAccessor
         {

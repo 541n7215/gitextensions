@@ -39,7 +39,7 @@ namespace GitCommandsTests.Git
         {
             var firstSelected = new[] { ObjectId.IndexId, ObjectId.Random() };
 
-            var selectedRevision = new GitRevision(ObjectId.WorkTreeId)
+            GitRevision selectedRevision = new(ObjectId.WorkTreeId)
             {
                 ParentIds = new[] { ObjectId.IndexId }
             };
@@ -59,7 +59,7 @@ namespace GitCommandsTests.Git
                 parent2
             };
 
-            var selectedRevision2 = new GitRevision(ObjectId.Random())
+            GitRevision selectedRevision2 = new(ObjectId.Random())
             {
                 ParentIds = new[] { parent1, parent2 }
             };
@@ -78,8 +78,8 @@ namespace GitCommandsTests.Git
         {
             IEnumerable<GitItemStatus> selectedItemsWithParent = new List<GitItemStatus>
             {
-                new GitItemStatus() { IsTracked = true },
-                new GitItemStatus() { IsTracked = false }
+                new GitItemStatus("file1") { IsTracked = true },
+                new GitItemStatus("file1") { IsTracked = false }
             };
             _tester.AnyLocalFileExists(selectedItemsWithParent).Should().BeTrue();
         }
@@ -89,8 +89,8 @@ namespace GitCommandsTests.Git
         {
             IEnumerable<GitItemStatus> selectedItemsWithParent = new List<GitItemStatus>
             {
-                new GitItemStatus() { IsTracked = true, Name = "file1" },
-                new GitItemStatus() { IsTracked = true, Name = "file2" }
+                new GitItemStatus("file1") { IsTracked = true },
+                new GitItemStatus("file2") { IsTracked = true }
             };
             _fullPathResolver.Resolve("file1").Returns("file1");
             _fullPathResolver.Resolve("file2").Returns("file2");
@@ -104,8 +104,8 @@ namespace GitCommandsTests.Git
         {
             IEnumerable<GitItemStatus> selectedItemsWithParent = new List<GitItemStatus>
             {
-                new GitItemStatus() { IsTracked = true, Name = "file1" },
-                new GitItemStatus() { IsTracked = true, Name = "file2" }
+                new GitItemStatus("file1") { IsTracked = true },
+                new GitItemStatus("file2") { IsTracked = true }
             };
             _fullPathResolver.Resolve("file1").Returns("file1");
             _fullPathResolver.Resolve("file2").Returns("file2");
@@ -134,7 +134,7 @@ namespace GitCommandsTests.Git
         {
             var gitRef = Substitute.For<IGitRef>();
             gitRef.Name.Returns(x => "Name is MyName");
-            var revision = new GitRevision(ObjectId.Random()) { Refs = new[] { gitRef } };
+            GitRevision revision = new(ObjectId.Random()) { Refs = new[] { gitRef } };
 
             _tester.Matches(revision, criteria).Should().BeTrue();
         }
@@ -148,7 +148,7 @@ namespace GitCommandsTests.Git
             var gitRef = Substitute.For<IGitRef>();
             gitRef.Name.Returns(x => "Name is MyName");
 
-            var revision = new GitRevision(ObjectId.Parse("0011223344556677889900112233445566778899")) { Refs = new[] { gitRef } };
+            GitRevision revision = new(ObjectId.Parse("0011223344556677889900112233445566778899")) { Refs = new[] { gitRef } };
 
             _tester.Matches(revision, criteria).Should().Be(expected);
         }

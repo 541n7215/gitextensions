@@ -26,7 +26,7 @@ namespace CommonTestUtils
 
             Directory.CreateDirectory(path);
 
-            var module = new GitModule(path);
+            GitModule module = new(path);
             module.Init(bare: false, shared: false);
             Module = module;
 
@@ -58,7 +58,7 @@ namespace CommonTestUtils
         /// <summary>
         /// Gets the module.
         /// </summary>
-        public GitModule Module { get; private set; }
+        public GitModule Module { get; }
 
         /// <summary>
         /// Gets the temporary path where test repositories will be created for integration tests.
@@ -150,7 +150,7 @@ namespace CommonTestUtils
             var paths = Module.GetSubmodulesLocalPaths(recursive: true);
             return paths.Select(path =>
             {
-                var module = new GitModule(Path.Combine(Module.WorkingDir, path).ToNativePath());
+                GitModule module = new(Path.Combine(Module.WorkingDir, path).ToNativePath());
                 SetDummyUserEmail(module);
                 return module;
             });

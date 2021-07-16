@@ -4,11 +4,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using CommonTestUtils;
+using CommonTestUtils.MEF;
 using FluentAssertions;
 using GitCommands;
 using GitCommands.Submodules;
 using GitUI;
 using GitUI.CommandsDialogs;
+using GitUIPluginInterfaces;
+using Microsoft.VisualStudio.Composition;
 using NUnit.Framework;
 
 namespace GitExtensions.UITests.CommandsDialogs
@@ -18,8 +21,12 @@ namespace GitExtensions.UITests.CommandsDialogs
     public class FormBrowse_LeftPanel_SubmodulesTests
     {
         // Created once for each test
+        private TestComposition _composition;
         private GitUICommands _commands;
+
+        // Track the original setting value
         private bool _originalShowAuthorAvatarColumn;
+        private bool _showAvailableDiffTools;
 
         private GitModuleTestHelper _repo1;
         private GitModuleTestHelper _repo2;
@@ -37,16 +44,27 @@ namespace GitExtensions.UITests.CommandsDialogs
         [OneTimeSetUp]
         public void SetUpFixture()
         {
+            // Remember the current settings...
             _originalShowAuthorAvatarColumn = AppSettings.ShowAuthorAvatarColumn;
+            _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
 
-            // we don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
+            // Stop loading custom diff tools
+            AppSettings.ShowAvailableDiffTools = false;
+
+            // We don't want avatars during tests, otherwise we will be attempting to download them from gravatar....
             AppSettings.ShowAuthorAvatarColumn = false;
+
+            _composition = TestComposition.Empty
+                .AddParts(typeof(MockWindowsJumpListManager))
+                .AddParts(typeof(MockRepositoryDescriptionProvider))
+                .AddParts(typeof(MockAppTitleGenerator));
         }
 
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
             AppSettings.ShowAuthorAvatarColumn = _originalShowAuthorAvatarColumn;
+            AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
         }
 
         [SetUp]
@@ -68,12 +86,15 @@ namespace GitExtensions.UITests.CommandsDialogs
             _provider = SubmoduleStatusProvider.Default;
 
             _commands = new GitUICommands(_repo1Module);
+
+            ExportProvider mefExportProvider = _composition.ExportProviderFactory.CreateExportProvider();
+            ManagedExtensibility.SetTestExportProvider(mefExportProvider);
         }
 
         [TearDown]
         public void TearDown()
         {
-            //// _provider is a singleton and must not be disposed
+            // _provider is a singleton and must not be disposed
             _repo1.Dispose();
             _repo2.Dispose();
             _repo3.Dispose();
@@ -110,7 +131,7 @@ namespace GitExtensions.UITests.CommandsDialogs
         private TreeNode GetSubmoduleNode(FormBrowse form)
         {
             var treeView = form.GetTestAccessor().RepoObjectsTree.GetTestAccessor().TreeView;
-            var remotesNode = treeView.Nodes.OfType<TreeNode>().FirstOrDefault(n => n.Text == GitUI.Strings.Submodules);
+            var remotesNode = treeView.Nodes.OfType<TreeNode>().FirstOrDefault(n => n.Text == TranslatedStrings.Submodules);
             remotesNode.Should().NotBeNull();
             return remotesNode;
         }

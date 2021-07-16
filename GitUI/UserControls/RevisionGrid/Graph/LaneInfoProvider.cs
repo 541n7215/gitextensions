@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using GitCommands;
 using ResourceManager;
 
@@ -7,9 +6,9 @@ namespace GitUI.UserControls.RevisionGrid.Graph
 {
     internal sealed class LaneInfoProvider
     {
-        private static readonly TranslationString NoInfoText = new TranslationString("Sorry, this commit seems to be not loaded.");
-        private static readonly TranslationString MergedWithText = new TranslationString(" (merged with {0})");
-        internal static readonly TranslationString ByPullRequestText = new TranslationString(" by pull request {0}");
+        private static readonly TranslationString NoInfoText = new("Sorry, this commit seems to be not loaded.");
+        private static readonly TranslationString MergedWithText = new(" (merged with {0})");
+        internal static readonly TranslationString ByPullRequestText = new(" by pull request {0}");
         private readonly ILaneNodeLocator _nodeLocator;
         private readonly IGitRevisionSummaryBuilder _gitRevisionSummaryBuilder;
 
@@ -32,7 +31,7 @@ namespace GitUI.UserControls.RevisionGrid.Graph
                 return NoInfoText.Text;
             }
 
-            var laneInfoText = new StringBuilder();
+            StringBuilder laneInfoText = new();
             if (!node.GitRevision.IsArtificial)
             {
                 if (isAtNode)
@@ -42,10 +41,10 @@ namespace GitUI.UserControls.RevisionGrid.Graph
 
                 laneInfoText.AppendLine(node.GitRevision.Guid);
 
-                var branch = new BranchFinder(node);
+                BranchFinder branch = new(node);
                 if (!string.IsNullOrWhiteSpace(branch.CommittedTo))
                 {
-                    laneInfoText.AppendFormat("\n{0}: {1}", Strings.Branch, branch.CommittedTo);
+                    laneInfoText.AppendFormat("\n{0}: {1}", TranslatedStrings.Branch, branch.CommittedTo);
                     if (!string.IsNullOrWhiteSpace(branch.MergedWith))
                     {
                         laneInfoText.AppendFormat(MergedWithText.Text, branch.MergedWith);
@@ -64,7 +63,7 @@ namespace GitUI.UserControls.RevisionGrid.Graph
                 laneInfoText.Append(node.GitRevision.Subject);
                 if (node.GitRevision.HasMultiLineMessage)
                 {
-                    laneInfoText.Append(Strings.BodyNotLoaded);
+                    laneInfoText.Append(TranslatedStrings.BodyNotLoaded);
                 }
             }
 

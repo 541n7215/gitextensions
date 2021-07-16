@@ -17,7 +17,7 @@ namespace GitUI
     /// <example>
     /// Define an instance of this type, usually as a private readonly field:
     /// <code>
-    /// private readonly CancellableSequence _sequence = new CancellableSequence();
+    /// private readonly CancellableSequence _sequence = new();
     /// </code>
     /// Then use it to generate <see cref="CancellationToken"/> objects for use in asynchronous
     /// operations.
@@ -32,7 +32,7 @@ namespace GitUI
         /// <remarks>
         /// If this field is <c>null</c>, the object has been disposed.
         /// </remarks>
-        private CancellationTokenSource? _cancellationTokenSource = new CancellationTokenSource();
+        private CancellationTokenSource? _cancellationTokenSource = new();
 
         /// <summary>
         /// Issues the <see cref="CancellationToken"/> for use by the next asynchronous operation in the sequence,
@@ -50,7 +50,7 @@ namespace GitUI
         /// <exception cref="OperationCanceledException">This object is disposed.</exception>
         public CancellationToken Next()
         {
-            var next = new CancellationTokenSource();
+            CancellationTokenSource next = new();
 
             // Make sure to obtain the CancellationToken for the next source before exposing the source,
             // or another thread could dispose of source before we get a chance to access this property.

@@ -65,7 +65,7 @@ namespace CommonTestUtils
                 try
                 {
                     // Wait for eventual pending operations triggered by the test.
-                    using var cts = new CancellationTokenSource(AsyncTestHelper.UnexpectedTimeout);
+                    using CancellationTokenSource cts = new(AsyncTestHelper.UnexpectedTimeout);
                     try
                     {
                         // Note that ThreadHelper.JoinableTaskContext.Factory must be used to bypass the default behavior of
@@ -144,12 +144,7 @@ namespace CommonTestUtils
 
             internal void ThrowIfSwitchOccurred()
             {
-                if (_failedTransfer.Value is null)
-                {
-                    return;
-                }
-
-                _failedTransfer.Value.Throw();
+                _failedTransfer.Value?.Throw();
             }
 
             public override void Post(SendOrPostCallback d, object state)

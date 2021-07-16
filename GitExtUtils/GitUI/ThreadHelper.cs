@@ -13,10 +13,7 @@ namespace GitUI
 {
     public static class ThreadHelper
     {
-#pragma warning disable SA1139 // Use literal suffix notation instead of casting
         private const int RPC_E_WRONG_THREAD = unchecked((int)0x8001010E);
-#pragma warning restore SA1139 // Use literal suffix notation instead of casting
-
         private static JoinableTaskContext _joinableTaskContext = null!;
         private static JoinableTaskCollection _joinableTaskCollection = null!;
         private static JoinableTaskFactory _joinableTaskFactory = null!;
@@ -99,7 +96,7 @@ namespace GitUI
                 {
                     try
                     {
-#pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks (As a fire-and-forget continuation, deadlocks can't happen.)
+#pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
                         await task.ConfigureAwait(false);
 #pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
                     }
@@ -118,6 +115,13 @@ namespace GitUI
         public static async Task JoinPendingOperationsAsync(CancellationToken cancellationToken)
         {
             await _joinableTaskCollection.JoinTillEmptyAsync(cancellationToken);
+        }
+
+        public static void JoinPendingOperations()
+        {
+            // Note that JoinableTaskContext.Factory must be used to bypass the default behavior of JoinableTaskFactory
+            // since the latter adds new tasks to the collection and would therefore never complete.
+            JoinableTaskContext.Factory.Run(_joinableTaskCollection.JoinTillEmptyAsync);
         }
 
         public static T CompletedResult<T>(this Task<T> task)

@@ -16,36 +16,37 @@ using GitUI.Script;
 using GitUI.UserControls;
 using GitUI.UserControls.RevisionGrid;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.BranchTreePanel
 {
     public partial class RepoObjectsTree : GitModuleControl
     {
-        private readonly CancellationTokenSequence _selectionCancellationTokenSequence = new CancellationTokenSequence();
+        private readonly CancellationTokenSequence _selectionCancellationTokenSequence = new();
         private readonly TranslationString _showBranchOnly =
-            new TranslationString("Filter the revision grid to show this branch only\nTo show all branches, right click the revision grid, select 'view' and then the 'show all branches'");
-        private readonly TranslationString _searchTooltip = new TranslationString("Search");
-        private readonly TranslationString _showHideRefsTooltip = new TranslationString("Show/hide branches/remotes/tags");
+            new("Filter the revision grid to show this branch only\nTo show all branches, right click the revision grid, select 'view' and then the 'show all branches'");
+        private readonly TranslationString _searchTooltip = new("Search");
+        private readonly TranslationString _showHideRefsTooltip = new("Show/hide branches/remotes/tags");
 
         private NativeTreeViewDoubleClickDecorator _doubleClickDecorator;
         private NativeTreeViewExplorerNavigationDecorator _explorerNavigationDecorator;
-        private readonly List<Tree> _rootNodes = new List<Tree>();
+        private readonly List<Tree> _rootNodes = new();
         private readonly SearchControl<string> _txtBranchCriterion;
         private BranchTree _branchesTree;
         private RemoteBranchTree _remotesTree;
         private TagTree _tagTree;
         private SubmoduleTree _submoduleTree;
-        private List<TreeNode> _searchResult;
+        private List<TreeNode>? _searchResult;
         private FilterBranchHelper _filterBranchHelper;
-        private IAheadBehindDataProvider _aheadBehindDataProvider;
+        private IAheadBehindDataProvider? _aheadBehindDataProvider;
         private bool _searchCriteriaChanged;
         private ICheckRefs _refsSource;
         private IScriptHostControl _scriptHost;
         private IRunScript _scriptRunner;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public RepoObjectsTree()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             Disposed += (s, e) => _selectionCancellationTokenSequence.Dispose();
 
@@ -58,13 +59,9 @@ namespace GitUI.BranchTreePanel
             btnSearch.PreviewKeyDown += OnPreviewKeyDown;
             PreviewKeyDown += OnPreviewKeyDown;
 
-            mnubtnCollapseAll.AdaptImageLightness();
+            mnubtnCollapse.AdaptImageLightness();
             tsbCollapseAll.AdaptImageLightness();
-            tsbShowBranches.AdaptImageLightness();
-            tsbShowRemotes.AdaptImageLightness();
-            tsbShowTags.AdaptImageLightness();
-            tsbShowSubmodules.AdaptImageLightness();
-            mnubtnExpandAll.AdaptImageLightness();
+            mnubtnExpand.AdaptImageLightness();
             mnubtnFetchAllBranchesFromARemote.AdaptImageLightness();
             mnuBtnPruneAllBranchesFromARemote.AdaptImageLightness();
             mnuBtnFetchAllRemotes.AdaptImageLightness();
@@ -76,10 +73,9 @@ namespace GitUI.BranchTreePanel
             RegisterContextActions();
 
             treeMain.ShowNodeToolTips = true;
-            treeMain.HideSelection = false;
 
             toolTip.SetToolTip(btnSearch, _searchTooltip.Text);
-            tsbCollapseAll.ToolTipText = mnubtnCollapseAll.ToolTipText;
+            tsbCollapseAll.ToolTipText = mnubtnCollapse.ToolTipText;
 
             tsbShowBranches.Checked = AppSettings.RepoObjectsTreeShowBranches;
             tsbShowRemotes.Checked = AppSettings.RepoObjectsTreeShowRemotes;
@@ -146,18 +142,16 @@ namespace GitUI.BranchTreePanel
 
                 Image Pad(Image image)
                 {
-                    var padded = new Bitmap(image.Width, image.Height + rowPadding + rowPadding, PixelFormat.Format32bppArgb);
-                    using (var g = Graphics.FromImage(padded))
-                    {
-                        g.DrawImageUnscaled(image, 0, rowPadding);
-                        return padded;
-                    }
+                    Bitmap padded = new(image.Width, image.Height + rowPadding + rowPadding, PixelFormat.Format32bppArgb);
+                    using var g = Graphics.FromImage(padded);
+                    g.DrawImageUnscaled(image, 0, rowPadding);
+                    return padded;
                 }
             }
 
             SearchControl<string> CreateSearchBox()
             {
-                var search = new SearchControl<string>(SearchForBranch, i => { })
+                SearchControl<string> search = new(SearchForBranch, i => { })
                 {
                     Anchor = AnchorStyles.Left | AnchorStyles.Right,
                     Name = "txtBranchCritierion",
@@ -165,8 +159,8 @@ namespace GitUI.BranchTreePanel
                 };
                 search.OnTextEntered += () =>
                 {
-                    OnBranchCriterionChanged(null, null);
-                    OnBtnSearchClicked(null, null);
+                    OnBranchCriterionChanged(this, EventArgs.Empty);
+                    OnBtnSearchClicked(this, EventArgs.Empty);
                 };
                 search.TextChanged += OnBranchCriterionChanged;
                 search.KeyDown += TxtBranchCriterion_KeyDown;
@@ -187,7 +181,7 @@ namespace GitUI.BranchTreePanel
 
                 IEnumerable<string> CollectFilterCandidates()
                 {
-                    var list = new List<string>();
+                    List<string> list = new();
 
                     foreach (TreeNode rootNode in treeMain.Nodes)
                     {
@@ -221,10 +215,8 @@ namespace GitUI.BranchTreePanel
 
         private void BeforeDoubleClickExpandCollapse(object sender, CancelEventArgs e)
         {
-            var node = treeMain.SelectedNode?.Tag as Node;
-
             // If node is an inner node, and overrides OnDoubleClick, then disable expand/collapse
-            if (node is not null
+            if (treeMain.SelectedNode?.Tag is Node node
                 && node.Nodes.Count > 0
                 && IsOverride(node.GetType().GetMethod("OnDoubleClick", BindingFlags.Instance | BindingFlags.NonPublic)))
             {
@@ -239,7 +231,7 @@ namespace GitUI.BranchTreePanel
             }
         }
 
-        public void Initialize([CanBeNull] IAheadBehindDataProvider aheadBehindDataProvider, FilterBranchHelper filterBranchHelper, ICheckRefs refsSource, IScriptHostControl scriptHost, IRunScript scriptRunner)
+        public void Initialize(IAheadBehindDataProvider? aheadBehindDataProvider, FilterBranchHelper filterBranchHelper, ICheckRefs refsSource, IScriptHostControl scriptHost, IRunScript scriptRunner)
         {
             _aheadBehindDataProvider = aheadBehindDataProvider;
             _filterBranchHelper = filterBranchHelper;
@@ -304,7 +296,7 @@ namespace GitUI.BranchTreePanel
                 }
             }).FileAndForget();
 
-            static ObjectId GetSelectedNodeObjectId(TreeNode treeNode)
+            static ObjectId? GetSelectedNodeObjectId(TreeNode treeNode)
             {
                 // Local or remote branch nodes or tag nodes
                 return Node.GetNodeSafe<BaseBranchLeafNode>(treeNode)?.ObjectId ??
@@ -314,6 +306,8 @@ namespace GitUI.BranchTreePanel
 
         protected override void OnUICommandsSourceSet(IGitUICommandsSource source)
         {
+            _selectionCancellationTokenSequence.CancelCurrent();
+
             base.OnUICommandsSourceSet(source);
 
             CreateBranches();
@@ -334,9 +328,9 @@ namespace GitUI.BranchTreePanel
 
         private void CreateBranches()
         {
-            var rootNode = new TreeNode(Strings.Branches)
+            TreeNode rootNode = new(TranslatedStrings.Branches)
             {
-                Name = Strings.Branches,
+                Name = TranslatedStrings.Branches,
                 ImageKey = nameof(Images.BranchLocalRoot),
                 SelectedImageKey = nameof(Images.BranchLocalRoot),
             };
@@ -345,9 +339,9 @@ namespace GitUI.BranchTreePanel
 
         private void CreateRemotes()
         {
-            var rootNode = new TreeNode(Strings.Remotes)
+            TreeNode rootNode = new(TranslatedStrings.Remotes)
             {
-                Name = Strings.Remotes,
+                Name = TranslatedStrings.Remotes,
                 ImageKey = nameof(Images.BranchRemoteRoot),
                 SelectedImageKey = nameof(Images.BranchRemoteRoot),
             };
@@ -362,9 +356,9 @@ namespace GitUI.BranchTreePanel
 
         private void CreateTags()
         {
-            var rootNode = new TreeNode(Strings.Tags)
+            TreeNode rootNode = new(TranslatedStrings.Tags)
             {
-                Name = Strings.Tags,
+                Name = TranslatedStrings.Tags,
                 ImageKey = nameof(Images.TagHorizontal),
                 SelectedImageKey = nameof(Images.TagHorizontal),
             };
@@ -373,9 +367,9 @@ namespace GitUI.BranchTreePanel
 
         private void CreateSubmodules()
         {
-            var rootNode = new TreeNode(Strings.Submodules)
+            TreeNode rootNode = new(TranslatedStrings.Submodules)
             {
-                Name = Strings.Submodules,
+                Name = TranslatedStrings.Submodules,
                 ImageKey = nameof(Images.FolderSubmodule),
                 SelectedImageKey = nameof(Images.FolderSubmodule),
             };
@@ -394,7 +388,7 @@ namespace GitUI.BranchTreePanel
             nodeList.Add(tree.TreeViewNode);
             treeMain.Nodes.Clear();
             var treeToPositionIndex = GetTreeToPositionIndex();
-            treeMain.Nodes.AddRange(nodeList.OrderBy(treeNode => treeToPositionIndex[treeNode.Tag as Tree]).ToArray());
+            treeMain.Nodes.AddRange(nodeList.OrderBy(treeNode => treeToPositionIndex[(Tree)treeNode.Tag]).ToArray());
             treeMain.EndUpdate();
 
             treeMain.Font = AppSettings.Font;
@@ -453,7 +447,7 @@ namespace GitUI.BranchTreePanel
 
             return;
 
-            TreeNode GetNextSearchResult()
+            TreeNode? GetNextSearchResult()
             {
                 var first = _searchResult?.FirstOrDefault();
 
@@ -462,15 +456,15 @@ namespace GitUI.BranchTreePanel
                     return null;
                 }
 
-                _searchResult.RemoveAt(0);
+                _searchResult!.RemoveAt(0);
                 _searchResult.Add(first);
                 return first;
             }
 
             List<TreeNode> SearchTree(string text, IEnumerable<TreeNode> nodes)
             {
-                var queue = new Queue<TreeNode>(nodes);
-                var ret = new List<TreeNode>();
+                Queue<TreeNode> queue = new(nodes);
+                List<TreeNode> ret = new();
 
                 while (queue.Count != 0)
                 {
@@ -523,7 +517,7 @@ namespace GitUI.BranchTreePanel
                 return;
             }
 
-            OnBtnSearchClicked(null, null);
+            OnBtnSearchClicked(this, EventArgs.Empty);
             e.Handled = true;
         }
 
@@ -531,7 +525,7 @@ namespace GitUI.BranchTreePanel
         {
             if (e.KeyCode == Keys.F3)
             {
-                OnBtnSearchClicked(null, null);
+                OnBtnSearchClicked(this, EventArgs.Empty);
             }
         }
 
@@ -562,7 +556,7 @@ namespace GitUI.BranchTreePanel
         }
 
         internal TestAccessor GetTestAccessor()
-            => new TestAccessor(this);
+            => new(this);
 
         internal readonly struct TestAccessor
         {

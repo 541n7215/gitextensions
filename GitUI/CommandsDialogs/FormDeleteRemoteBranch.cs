@@ -15,15 +15,17 @@ namespace GitUI.CommandsDialogs
 {
     public sealed partial class FormDeleteRemoteBranch : GitModuleForm
     {
-        private readonly TranslationString _deleteRemoteBranchesCaption = new TranslationString("Delete remote branches");
+        private readonly TranslationString _deleteRemoteBranchesCaption = new("Delete remote branches");
         private readonly TranslationString _confirmDeleteUnmergedRemoteBranchMessage =
-            new TranslationString("At least one remote branch is unmerged. Are you sure you want to delete it?" + Environment.NewLine + "Deleting a branch can cause commits to be deleted too!");
+            new("At least one remote branch is unmerged. Are you sure you want to delete it?" + Environment.NewLine + "Deleting a branch can cause commits to be deleted too!");
 
-        private readonly HashSet<string> _mergedBranches = new HashSet<string>();
+        private readonly HashSet<string> _mergedBranches = new();
         private readonly string _defaultRemoteBranch;
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormDeleteRemoteBranch()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -38,7 +40,7 @@ namespace GitUI.CommandsDialogs
 
         private void FormDeleteRemoteBranchLoad(object sender, EventArgs e)
         {
-            Branches.BranchesToSelect = Module.GetRefs(tags: true, branches: true).Where(h => h.IsRemote).ToList();
+            Branches.BranchesToSelect = Module.GetRefs(RefsFilter.Remotes).ToList();
             foreach (var branch in Module.GetMergedRemoteBranches())
             {
                 _mergedBranches.Add(branch);
@@ -75,21 +77,23 @@ namespace GitUI.CommandsDialogs
                 {
                     EnsurePageant(remote);
 
-                    var cmd = new GitDeleteRemoteBranchesCmd(remote, branches.Select(x => x.LocalName));
+                    GitDeleteRemoteBranchesCmd cmd = new(remote, branches.Select(x => x.LocalName));
 
-                    ScriptManager.RunEventScripts(this, ScriptEvent.BeforePush);
+                    bool success = ScriptManager.RunEventScripts(this, ScriptEvent.BeforePush);
+                    if (!success)
+                    {
+                        return;
+                    }
 
-                    using (var form = new FormRemoteProcess(UICommands, process: null, cmd.Arguments)
+                    using FormRemoteProcess form = new(UICommands, process: null, cmd.Arguments)
                     {
                         Remote = remote
-                    })
-                    {
-                        form.ShowDialog();
+                    };
+                    form.ShowDialog();
 
-                        if (!Module.InTheMiddleOfAction() && !form.ErrorOccurred())
-                        {
-                            ScriptManager.RunEventScripts(this, ScriptEvent.AfterPush);
-                        }
+                    if (!Module.InTheMiddleOfAction() && !form.ErrorOccurred())
+                    {
+                        ScriptManager.RunEventScripts(this, ScriptEvent.AfterPush);
                     }
                 }
 

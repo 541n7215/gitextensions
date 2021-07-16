@@ -8,7 +8,7 @@ using GitCommands;
 using GitUI.BranchTreePanel.Interfaces;
 using GitUI.UserControls;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
+using Microsoft;
 
 namespace GitUI.BranchTreePanel
 {
@@ -16,11 +16,11 @@ namespace GitUI.BranchTreePanel
     {
         private sealed class Nodes : IEnumerable<Node>
         {
-            private readonly List<Node> _nodesList = new List<Node>();
+            private readonly List<Node> _nodesList = new();
 
-            public Tree Tree { get; }
+            public Tree? Tree { get; }
 
-            public Nodes(Tree tree)
+            public Nodes(Tree? tree)
             {
                 Tree = tree;
             }
@@ -51,7 +51,7 @@ namespace GitUI.BranchTreePanel
             System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
             /// <summary>
-            /// Returns all nodes of a given TNode type using depth-first, pre-order method
+            /// Returns all nodes of a given TNode type using depth-first, pre-order method.
             /// </summary>
             public IEnumerable<TNode> DepthEnumerator<TNode>() where TNode : Node
             {
@@ -76,7 +76,7 @@ namespace GitUI.BranchTreePanel
             /// </summary>
             internal void FillTreeViewNode(TreeNode treeViewNode)
             {
-                var prevNodes = new HashSet<Node>();
+                HashSet<Node> prevNodes = new();
                 for (var i = 0; i < treeViewNode.Nodes.Count; i++)
                 {
                     prevNodes.Add(Node.GetNode(treeViewNode.Nodes[i]));
@@ -114,14 +114,14 @@ namespace GitUI.BranchTreePanel
 
             public int Count => _nodesList.Count;
 
-            public Node LastNode => _nodesList.Count > 0 ? _nodesList[_nodesList.Count - 1] : null;
+            public Node? LastNode => _nodesList.Count > 0 ? _nodesList[_nodesList.Count - 1] : null;
         }
 
         private abstract class Tree : IDisposable
         {
             protected readonly Nodes Nodes;
             private readonly IGitUICommandsSource _uiCommandsSource;
-            private readonly CancellationTokenSequence _reloadCancellationTokenSequence = new CancellationTokenSequence();
+            private readonly CancellationTokenSequence _reloadCancellationTokenSequence = new();
             private bool _firstReloadNodesSinceModuleChanged = true;
 
             // A flag to indicate whether the data is currently being filtered or not.
@@ -129,7 +129,7 @@ namespace GitUI.BranchTreePanel
             private bool _isCurrentlyFiltering;
 
             // A flag to indicate whether the data is being filtered (e.g. Show Current Branch Only).
-            private protected static AsyncLocal<bool> IsFiltering = new AsyncLocal<bool>();
+            private protected static AsyncLocal<bool> IsFiltering = new();
 
             protected Tree(TreeNode treeNode, IGitUICommandsSource uiCommands)
             {
@@ -153,7 +153,11 @@ namespace GitUI.BranchTreePanel
                     _firstReloadNodesSinceModuleChanged = true;
 
                     // Rebind callbacks
-                    e.OldCommands.PostRepositoryChanged -= UICommands_PostRepositoryChanged;
+                    if (e.OldCommands is not null)
+                    {
+                        e.OldCommands.PostRepositoryChanged -= UICommands_PostRepositoryChanged;
+                    }
+
                     uiCommands.UICommands.PostRepositoryChanged += UICommands_PostRepositoryChanged;
                 };
 
@@ -261,10 +265,7 @@ namespace GitUI.BranchTreePanel
                 });
             }
 
-            protected virtual Task<Nodes> LoadNodesAsync(CancellationToken token)
-            {
-                return Task.FromResult<Nodes>(null);
-            }
+            protected abstract Task<Nodes> LoadNodesAsync(CancellationToken token);
 
             public IEnumerable<TNode> DepthEnumerator<TNode>() where TNode : Node
                 => Nodes.DepthEnumerator<TNode>();
@@ -282,16 +283,24 @@ namespace GitUI.BranchTreePanel
                     return;
                 }
 
-                Nodes newNodes = await loadNodesTask(token);
+                // Module is invalid in Dashboard
+                Nodes newNodes = Module.IsValidGitWorkingDir() ? await loadNodesTask(token) : new(tree: null);
 
                 await treeView.SwitchToMainThreadAsync(token);
 
                 Nodes.Clear();
                 Nodes.AddNodes(newNodes);
 
+                // Check again after switch to main thread
+                treeView = TreeViewNode.TreeView;
+                if (treeView is null || !IsAttached)
+                {
+                    return;
+                }
+
                 try
                 {
-                    string originalSelectedNodeFullNamePath = treeView.SelectedNode?.GetFullNamePath();
+                    string? originalSelectedNodeFullNamePath = treeView.SelectedNode?.GetFullNamePath();
 
                     treeView.BeginUpdate();
                     IgnoreSelectionChangedEvent = true;
@@ -306,7 +315,7 @@ namespace GitUI.BranchTreePanel
                 }
             }
 
-            private void FillTreeViewNode(string originalSelectedNodeFullNamePath, bool firstTime)
+            private void FillTreeViewNode(string? originalSelectedNodeFullNamePath, bool firstTime)
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -366,20 +375,35 @@ namespace GitUI.BranchTreePanel
         private abstract class Node : INode
         {
             public readonly Nodes Nodes;
-            protected Tree Tree => Nodes.Tree;
+
+            protected Tree Tree
+            {
+                get
+                {
+                    Validates.NotNull(Nodes.Tree);
+                    return Nodes.Tree;
+                }
+            }
+
             protected GitUICommands UICommands => Tree.UICommands;
 
             protected GitModule Module => UICommands.Module;
 
-            protected Node(Tree tree)
+            protected Node(Tree? tree)
             {
                 Nodes = new Nodes(tree);
             }
 
-            private TreeNode _treeViewNode;
+            private TreeNode? _treeViewNode;
+
             public TreeNode TreeViewNode
             {
-                get => _treeViewNode;
+                get
+                {
+                    Validates.NotNull(_treeViewNode);
+                    return _treeViewNode;
+                }
+
                 set
                 {
                     _treeViewNode = value;
@@ -391,7 +415,7 @@ namespace GitUI.BranchTreePanel
             }
 
             private static readonly Dictionary<Type, ContextMenuStrip> DefaultContextMenus
-                = new Dictionary<Type, ContextMenuStrip>();
+                = new();
 
             public static void RegisterContextMenu(Type type, ContextMenuStrip menu)
             {
@@ -405,17 +429,15 @@ namespace GitUI.BranchTreePanel
                 DefaultContextMenus.Add(type, menu);
             }
 
-            [CanBeNull]
-            protected virtual ContextMenuStrip GetContextMenuStrip()
+            protected virtual ContextMenuStrip? GetContextMenuStrip()
             {
                 DefaultContextMenus.TryGetValue(GetType(), out var result);
                 return result;
             }
 
-            [CanBeNull]
-            protected IWin32Window ParentWindow()
+            protected IWin32Window? ParentWindow()
             {
-                return TreeViewNode.TreeView.FindForm();
+                return TreeViewNode.TreeView?.FindForm();
             }
 
             protected virtual string DisplayText()
@@ -450,15 +472,14 @@ namespace GitUI.BranchTreePanel
                     }
 
                     // If non-null, our font is already valid, otherwise create a new one
-                    if (TreeViewNode.NodeFont is null)
-                    {
-                        TreeViewNode.NodeFont = new Font(AppSettings.Font, style);
-                    }
+                    TreeViewNode.NodeFont ??= new Font(AppSettings.Font, style);
                 }
             }
 
             protected void ApplyText()
             {
+                Validates.NotNull(_treeViewNode);
+
                 _treeViewNode.Name = NodeName();
                 _treeViewNode.Text = DisplayText();
             }
@@ -486,8 +507,7 @@ namespace GitUI.BranchTreePanel
                 return (Node)treeNode.Tag;
             }
 
-            [CanBeNull]
-            internal static T GetNodeSafe<T>([CanBeNull] TreeNode treeNode) where T : class, INode
+            internal static T? GetNodeSafe<T>(TreeNode? treeNode) where T : class, INode
             {
                 return treeNode?.Tag as T;
             }

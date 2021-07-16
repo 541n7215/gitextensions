@@ -8,7 +8,6 @@ using GitUI.CommandsDialogs;
 using GitUI.Properties;
 using GitUI.UserControls.RevisionGrid;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitUI.BranchTreePanel
@@ -18,14 +17,13 @@ namespace GitUI.BranchTreePanel
         [DebuggerDisplay("(Tag) FullPath = {FullPath}, Hash = {ObjectId}, Visible: {Visible}")]
         private class TagNode : BaseBranchNode, IGitRefActions, ICanDelete
         {
-            public TagNode(Tree tree, in ObjectId objectId, string fullPath, bool visible)
+            public TagNode(Tree tree, in ObjectId? objectId, string fullPath, bool visible)
                 : base(tree, fullPath, visible)
             {
                 ObjectId = objectId;
             }
 
-            [CanBeNull]
-            public ObjectId ObjectId { get; }
+            public ObjectId? ObjectId { get; }
 
             internal override void OnSelected()
             {
@@ -50,7 +48,7 @@ namespace GitUI.BranchTreePanel
 
             public bool Delete()
             {
-                return UICommands.StartDeleteTagDialog(TreeViewNode.TreeView, Name);
+                return UICommands.StartDeleteTagDialog(TreeViewNode.TreeView, FullPath);
             }
 
             public bool Merge()
@@ -70,11 +68,9 @@ namespace GitUI.BranchTreePanel
 
             public bool Checkout()
             {
-                using (var form = new FormCheckoutRevision(UICommands))
-                {
-                    form.SetRevision(FullPath);
-                    return form.ShowDialog(TreeViewNode.TreeView) != DialogResult.Cancel;
-                }
+                using FormCheckoutRevision form = new(UICommands);
+                form.SetRevision(FullPath);
+                return form.ShowDialog(TreeViewNode.TreeView) != DialogResult.Cancel;
             }
         }
 
@@ -85,7 +81,7 @@ namespace GitUI.BranchTreePanel
             // Retains the list of currently loaded tags.
             // This is needed to apply filtering without reloading the data.
             // Whether or not force the reload of data is controlled by <see cref="_isFiltering"/> flag.
-            private IReadOnlyList<IGitRef> _loadedTags;
+            private IReadOnlyList<IGitRef>? _loadedTags;
 
             public TagTree(TreeNode treeNode, IGitUICommandsSource uiCommands, ICheckRefs refsSource)
                 : base(treeNode, uiCommands)
@@ -123,7 +119,7 @@ namespace GitUI.BranchTreePanel
 
                 if (!IsFiltering.Value || _loadedTags is null)
                 {
-                    _loadedTags = Module.GetRefs(tags: true, branches: false);
+                    _loadedTags = Module.GetRefs(RefsFilter.Tags);
                     token.ThrowIfCancellationRequested();
                 }
 
@@ -132,14 +128,14 @@ namespace GitUI.BranchTreePanel
 
             private Nodes FillTagTree(IReadOnlyList<IGitRef> tags, CancellationToken token)
             {
-                var nodes = new Nodes(this);
-                var pathToNodes = new Dictionary<string, BaseBranchNode>();
+                Nodes nodes = new(this);
+                Dictionary<string, BaseBranchNode> pathToNodes = new();
                 foreach (IGitRef tag in tags)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    bool isVisible = !IsFiltering.Value || _refsSource.Contains(tag.ObjectId);
-                    var tagNode = new TagNode(this, tag.ObjectId, tag.Name, isVisible);
+                    bool isVisible = !IsFiltering.Value || (tag.ObjectId is not null && _refsSource.Contains(tag.ObjectId));
+                    TagNode tagNode = new(this, tag.ObjectId, tag.Name, isVisible);
                     var parent = tagNode.CreateRootNode(pathToNodes, (tree, parentPath) => new BasePathNode(tree, parentPath));
                     if (parent is not null)
                     {

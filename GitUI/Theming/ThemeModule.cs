@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Drawing;
-using System.Reflection;
 using System.Windows.Forms;
 using GitCommands;
 using GitExtUtils.GitUI.Theming;
@@ -11,15 +9,18 @@ namespace GitUI.Theming
 {
     public static class ThemeModule
     {
+        private static bool _suppressWin32HooksForTests;
+
         public static ThemeSettings Settings { get; private set; } = ThemeSettings.Default;
 
-        private static ThemeRepository Repository { get; } = new ThemeRepository();
+        private static ThemeRepository Repository { get; } = new();
         public static bool IsDarkTheme { get; private set; }
 
         public static void Load()
         {
             new ThemeMigration(Repository).Migrate();
-            Settings = LoadThemeSettings();
+            Settings = LoadThemeSettings(Repository);
+            IsDarkTheme = Settings.Theme.GetNonEmptyColor(KnownColor.Window).GetBrightness() < 0.5;
             ColorHelper.ThemeSettings = Settings;
             ThemeFix.ThemeSettings = Settings;
             Win32ThemeHooks.ThemeSettings = Settings;
@@ -42,12 +43,12 @@ namespace GitUI.Theming
             ResetGdiCaches();
         }
 
-        private static ThemeSettings LoadThemeSettings()
+        private static ThemeSettings LoadThemeSettings(IThemeRepository repository)
         {
             Theme invariantTheme;
             try
             {
-                invariantTheme = Repository.GetInvariantTheme();
+                invariantTheme = repository.GetInvariantTheme();
             }
             catch (ThemeException ex)
             {
@@ -65,7 +66,7 @@ namespace GitUI.Theming
             Theme theme;
             try
             {
-                theme = Repository.GetTheme(themeId, AppSettings.ThemeVariations);
+                theme = repository.GetTheme(themeId, AppSettings.ThemeVariations);
             }
             catch (ThemeException ex)
             {
@@ -73,23 +74,27 @@ namespace GitUI.Theming
                 return CreateFallbackSettings(invariantTheme);
             }
 
-            try
+            if (!AppSettings.UseSystemVisualStyle && !_suppressWin32HooksForTests)
             {
-                InstallHooks(theme);
+                try
+                {
+#if SUPPORT_THEMES
+                    InstallHooks(theme);
+#endif
+                }
+                catch (Exception ex)
+                {
+                    MessageBoxes.ShowError(null, $"Failed to install Win32 theming hooks: {ex}");
+                    return CreateFallbackSettings(invariantTheme);
+                }
             }
-            catch (Exception ex)
-            {
-                MessageBoxes.ShowError(null, $"Failed to install Win32 theming hooks: {ex}");
-                return CreateFallbackSettings(invariantTheme);
-            }
-
-            IsDarkTheme = theme.SysColorValues[KnownColor.Window].GetBrightness() < 0.5;
 
             return new ThemeSettings(theme, invariantTheme, AppSettings.ThemeVariations, AppSettings.UseSystemVisualStyle);
         }
 
         private static void ResetGdiCaches()
         {
+#if SUPPORT_THEMES
             var systemDrawingAssembly = typeof(Color).Assembly;
 
             var colorTableField =
@@ -121,6 +126,7 @@ namespace GitUI.Theming
 
             threadData[systemBrushesKey] = null;
             threadData[systemPensKey] = null;
+#endif
         }
 
         public static void Unload()
@@ -129,17 +135,34 @@ namespace GitUI.Theming
             Win32ThemeHooks.WindowCreated -= Handle_WindowCreated;
         }
 
+        public static void ReloadWin32ThemeData()
+        {
+            Win32ThemeHooks.LoadThemeData();
+        }
+
         private static void Handle_WindowCreated(IntPtr hwnd)
         {
             switch (Control.FromHandle(hwnd))
             {
                 case Form form:
-                    form.Load += (s, e) => ((Form)s).FixVisualStyle();
+                    form.Load += (s, e) => ((Form)s!).FixVisualStyle();
                     break;
             }
         }
 
         private static ThemeSettings CreateFallbackSettings(Theme invariantTheme) =>
-            new ThemeSettings(Theme.Default, invariantTheme, ThemeVariations.None, useSystemVisualStyle: true);
+            new(Theme.Default, invariantTheme, ThemeVariations.None, useSystemVisualStyle: true);
+
+        internal static class TestAccessor
+        {
+            public static void ReloadThemeSettings(IThemeRepository repository) =>
+                Settings = LoadThemeSettings(repository);
+
+            public static bool SuppressWin32Hooks
+            {
+                get => _suppressWin32HooksForTests;
+                set => _suppressWin32HooksForTests = value;
+            }
+        }
     }
 }

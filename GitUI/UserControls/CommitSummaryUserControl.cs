@@ -15,14 +15,14 @@ namespace GitUI.UserControls
     public partial class CommitSummaryUserControl : GitExtensionsControl
     {
         private const int MaxBranchTagLength = 75;
-        private readonly TranslationString _noRevision = new TranslationString("No revision");
-        private readonly TranslationString _notAvailable = new TranslationString("n/a");
+        private readonly TranslationString _noRevision = new("No revision");
+        private readonly TranslationString _notAvailable = new("n/a");
         private readonly IDateFormatter _dateFormatter = new DateFormatter();
         private readonly string _tagsCaption;
         private readonly string _branchesCaption;
         private readonly Color _tagsBackColor = Color.LightSteelBlue;
         private readonly Color _branchesBackColor = Color.LightSalmon;
-        private GitRevision _revision;
+        private GitRevision? _revision;
 
         private readonly int _messageY;
         private readonly int _messageHeight;
@@ -45,15 +45,15 @@ namespace GitUI.UserControls
         /// <summary>
         /// Gets or sets a revision for which to show a summary.
         /// </summary>
-        public GitRevision Revision
+        public GitRevision? Revision
         {
             get => _revision;
             set
             {
                 _revision = value;
 
-                labelAuthorCaption.Text = ResourceManager.Strings.Author + ":";
-                labelDateCaption.Text = ResourceManager.Strings.CommitDate + ":";
+                labelAuthorCaption.Text = ResourceManager.TranslatedStrings.Author + ":";
+                labelDateCaption.Text = ResourceManager.TranslatedStrings.CommitDate + ":";
                 labelTagsCaption.Text = _tagsCaption;
                 labelBranchesCaption.Text = _branchesCaption;
 

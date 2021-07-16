@@ -11,10 +11,10 @@ namespace GitExtUtils.GitUI.Theming
     public static class ThemeFix
     {
         private static readonly ConditionalWeakTable<IWin32Window, IWin32Window> AlreadyFixedControls =
-            new ConditionalWeakTable<IWin32Window, IWin32Window>();
+            new();
 
         private static readonly ConditionalWeakTable<IWin32Window, IWin32Window> AlreadyFixedContextMenuOwners =
-            new ConditionalWeakTable<IWin32Window, IWin32Window>();
+            new();
 
         public static ThemeSettings ThemeSettings { private get; set; } = ThemeSettings.Default;
 
@@ -74,14 +74,15 @@ namespace GitExtUtils.GitUI.Theming
 
         private static void SetupToolStrip(ToolStrip strip)
         {
-            strip.Renderer = new ThemeAwareToolStripRenderer();
+            strip.EnableTheming(enable: true);
+
             strip.Items.OfType<ToolStripLabel>()
                 .ForEach(SetupToolStripLabel);
         }
 
         private static void SetupContextMenu(ContextMenuStrip strip)
         {
-            strip.Renderer = new ThemeAwareToolStripRenderer();
+            strip.EnableTheming(enable: true);
         }
 
         private static void SetupToolStripLabel(ToolStripLabel label)

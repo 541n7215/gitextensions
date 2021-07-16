@@ -1,8 +1,6 @@
-﻿#nullable enable
-
-namespace GitUIPluginInterfaces
+﻿namespace GitUIPluginInterfaces
 {
-    public interface IGitRef : IGitItem
+    public interface IGitRef : INamedGitItem
     {
         string CompleteName { get; }
         bool IsBisect { get; }

@@ -17,7 +17,7 @@ namespace GitCommands.UserRepositoryHistory
         /// <param name="repository">The repository to categorise.</param>
         /// <param name="category">The new category, if it is supplied.</param>
         /// <returns>The current version of the list of favourite git repositories after the update.</returns>
-        Task<IList<Repository>> AssignCategoryAsync(Repository repository, string category);
+        Task<IList<Repository>> AssignCategoryAsync(Repository repository, string? category);
 
         /// <summary>
         /// Loads the list of favourite local git repositories from a persistent storage.
@@ -85,7 +85,7 @@ namespace GitCommands.UserRepositoryHistory
                 throw new ArgumentException(nameof(repositoryPath));
             }
 
-            if (PathUtil.IsUrl(repositoryPath))
+            if (Uri.IsWellFormedUriString(repositoryPath, UriKind.Absolute))
             {
                 // TODO: throw a specific exception
                 throw new NotSupportedException();
@@ -136,7 +136,7 @@ namespace GitCommands.UserRepositoryHistory
         /// <param name="category">The new category, if it is supplied.</param>
         /// <returns>The current version of the list of favourite git repositories after the update.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="repository"/> is <see langword="null"/>.</exception>
-        public async Task<IList<Repository>> AssignCategoryAsync(Repository repository, string category)
+        public async Task<IList<Repository>> AssignCategoryAsync(Repository repository, string? category)
         {
             if (repository is null)
             {

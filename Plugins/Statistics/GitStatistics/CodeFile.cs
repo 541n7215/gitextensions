@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-namespace GitStatistics
+namespace GitExtensions.Plugins.GitStatistics
 {
     public readonly struct CodeFile
     {
@@ -36,7 +36,7 @@ namespace GitStatistics
             IEnumerable<string> ReadLines()
             {
                 // NOTE not using File.ReadLines here as it doesn't appear to detect a BOM
-                using var reader = new StreamReader(file.FullName, detectEncodingFromByteOrderMarks: true);
+                using StreamReader reader = new(file.FullName, detectEncodingFromByteOrderMarks: true);
                 while (true)
                 {
                     var line = reader.ReadLine();

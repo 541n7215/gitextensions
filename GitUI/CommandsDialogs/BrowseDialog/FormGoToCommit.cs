@@ -5,23 +5,22 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using GitCommands;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 
 namespace GitUI.CommandsDialogs.BrowseDialog
 {
     public sealed partial class FormGoToCommit : GitModuleForm
     {
         /// <summary>
-        /// this will be used when Go() is called
+        /// this will be used when Go() is called.
         /// </summary>
-        private string _selectedRevision;
+        private string? _selectedRevision;
 
         // these two are used to prepare for _selectedRevision
-        private IGitRef _selectedTag;
-        private IGitRef _selectedBranch;
+        private IGitRef? _selectedTag;
+        private IGitRef? _selectedBranch;
 
-        private readonly AsyncLoader _tagsLoader = new AsyncLoader();
-        private readonly AsyncLoader _branchesLoader = new AsyncLoader();
+        private readonly AsyncLoader _tagsLoader = new();
+        private readonly AsyncLoader _branchesLoader = new();
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
         private FormGoToCommit()
@@ -44,10 +43,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         }
 
         /// <summary>
-        /// returns null if revision does not exist (could not be revparsed)
+        /// returns null if revision does not exist (could not be revparsed).
         /// </summary>
-        [CanBeNull]
-        public ObjectId ValidateAndGetSelectedRevision()
+        public ObjectId? ValidateAndGetSelectedRevision()
         {
             return Module.RevParse(_selectedRevision);
         }
@@ -75,9 +73,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
 
         private Task LoadTagsAsync()
         {
-            comboBoxTags.Text = Strings.LoadingData;
+            comboBoxTags.Text = TranslatedStrings.LoadingData;
             return _tagsLoader.LoadAsync(
-                () => Module.GetRefs(tags: true, branches: false).ToList(),
+                () => Module.GetRefs(RefsFilter.Tags).ToList(),
                 list =>
                 {
                     comboBoxTags.Text = string.Empty;
@@ -89,9 +87,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
 
         private Task LoadBranchesAsync()
         {
-            comboBoxBranches.Text = Strings.LoadingData;
+            comboBoxBranches.Text = TranslatedStrings.LoadingData;
             return _branchesLoader.LoadAsync(
-                () => Module.GetRefs(tags: false, branches: true).ToList(),
+                () => Module.GetRefs(RefsFilter.Heads).ToList(),
                 list =>
                 {
                     comboBoxBranches.Text = string.Empty;

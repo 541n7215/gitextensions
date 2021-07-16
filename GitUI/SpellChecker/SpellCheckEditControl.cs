@@ -17,10 +17,10 @@ namespace GitUI.SpellChecker
         private readonly RichTextBox _richTextBox;
         public List<TextPos> IllFormedLines { get; } = new List<TextPos>();
         public List<TextPos> Lines { get; } = new List<TextPos>();
-        private Bitmap _bitmap;
-        private Graphics _bufferGraphics;
+        private Bitmap? _bitmap;
+        private Graphics? _bufferGraphics;
         private int _lineHeight;
-        private Graphics _textBoxGraphics;
+        private Graphics? _textBoxGraphics;
 
         public SpellCheckEditControl(RichTextBox richTextBox)
         {
@@ -78,7 +78,7 @@ namespace GitUI.SpellChecker
             }
 
             // clear the graphics buffer
-            _bufferGraphics.Clear(Color.Transparent);
+            _bufferGraphics!.Clear(Color.Transparent);
 
             // * Here’s where the magic happens
 
@@ -102,7 +102,7 @@ namespace GitUI.SpellChecker
 
             // Now we just draw our internal buffer on top of the TextBox.
             // Everything should be at the right place.
-            _textBoxGraphics.DrawImageUnscaled(_bitmap, 0, 0);
+            _textBoxGraphics!.DrawImageUnscaled(_bitmap, 0, 0);
         }
 
         private void DrawLines(IEnumerable<TextPos> list, DrawType type)
@@ -156,12 +156,12 @@ namespace GitUI.SpellChecker
 
         private void DrawWave(Point start, Point end)
         {
-            using var pen = new Pen(Color.Red, DpiUtil.ScaleX);
+            using Pen pen = new(Color.Red, DpiUtil.ScaleX);
             var waveWidth = DpiUtil.Scale(4);
             var waveHalfWidth = waveWidth >> 1;
             if ((end.X - start.X) > waveWidth)
             {
-                var pl = new List<Point>();
+                List<Point> pl = new();
                 for (var i = start.X; i <= (end.X - waveHalfWidth); i += waveWidth)
                 {
                     pl.Add(new Point(i, start.Y));
@@ -169,11 +169,11 @@ namespace GitUI.SpellChecker
                 }
 
                 var p = pl.ToArray();
-                _bufferGraphics.DrawLines(pen, p);
+                _bufferGraphics!.DrawLines(pen, p);
             }
             else
             {
-                _bufferGraphics.DrawLine(pen, start, end);
+                _bufferGraphics!.DrawLine(pen, start, end);
             }
         }
 
@@ -181,10 +181,10 @@ namespace GitUI.SpellChecker
         {
             var col = Color.FromArgb(120, 255, 255, 0);
             var lineHeight = LineHeight();
-            using var pen = new Pen(col, lineHeight);
+            using Pen pen = new(col, lineHeight);
             start.Offset(0, -lineHeight / 2);
             end.Offset(0, -lineHeight / 2);
-            _bufferGraphics.DrawLine(pen, start, end);
+            _bufferGraphics!.DrawLine(pen, start, end);
         }
 
         private int LineHeight()

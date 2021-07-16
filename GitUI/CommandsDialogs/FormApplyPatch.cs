@@ -9,7 +9,6 @@ using GitCommands.Git.Commands;
 using GitCommands.Patches;
 using GitExtUtils.GitUI.Theming;
 using GitUI.HelperDialogs;
-using GitUI.Theming;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
@@ -19,24 +18,24 @@ namespace GitUI.CommandsDialogs
         #region Translation
 
         private readonly TranslationString _conflictResolvedText =
-            new TranslationString("Conflicts resolved");
+            new("Conflicts resolved");
         private readonly TranslationString _conflictMergetoolText =
-            new TranslationString("Solve conflicts");
+            new("Solve conflicts");
 
         private readonly TranslationString _selectPatchFileFilter =
-            new TranslationString("Patch file (*.Patch)");
+            new("Patch file (*.Patch)");
         private readonly TranslationString _selectPatchFileCaption =
-            new TranslationString("Select patch file");
+            new("Select patch file");
 
         private readonly TranslationString _noFileSelectedText =
-            new TranslationString("Please select a patch to apply");
+            new("Please select a patch to apply");
 
         private readonly TranslationString _applyPatchMsgBox =
-            new TranslationString("Apply patch");
+            new("Apply patch");
 
         #endregion
 
-        private static readonly List<PatchFile> Skipped = new List<PatchFile>();
+        private static readonly List<PatchFile> Skipped = new();
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
         private FormApplyPatch()
@@ -52,7 +51,7 @@ namespace GitUI.CommandsDialogs
 
             patchGrid1.SetSkipped(Skipped);
 
-            SolveMergeConflicts.BackColor = AppColor.Branch.GetThemeColor();
+            SolveMergeConflicts.BackColor = OtherColors.MergeConflictsColor;
             SolveMergeConflicts.SetForeColorForBackColor();
         }
 
@@ -150,15 +149,13 @@ namespace GitUI.CommandsDialogs
 
         private string SelectPatchFile(string initialDirectory)
         {
-            using (var dialog = new OpenFileDialog
+            using OpenFileDialog dialog = new()
             {
                 Filter = _selectPatchFileFilter.Text + "|*.patch",
                 InitialDirectory = initialDirectory,
                 Title = _selectPatchFileCaption.Text
-            })
-            {
-                return (dialog.ShowDialog(this) == DialogResult.OK) ? dialog.FileName : PatchFile.Text;
-            }
+            };
+            return (dialog.ShowDialog(this) == DialogResult.OK) ? dialog.FileName : PatchFile.Text;
         }
 
         private void BrowsePatch_Click(object sender, EventArgs e)
@@ -175,7 +172,7 @@ namespace GitUI.CommandsDialogs
 
             if (string.IsNullOrEmpty(patchFile) && string.IsNullOrEmpty(dirText))
             {
-                MessageBox.Show(this, _noFileSelectedText.Text, Strings.Error, MessageBoxButtons.OK,  MessageBoxIcon.Error);
+                MessageBox.Show(this, _noFileSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK,  MessageBoxIcon.Error);
                 return;
             }
 
@@ -216,12 +213,10 @@ namespace GitUI.CommandsDialogs
         {
             try
             {
-                using (var sr = new StreamReader(path))
-                {
-                    string line = sr.ReadLine();
+                using StreamReader sr = new(path);
+                string line = sr.ReadLine();
 
-                    return line is not null && (line.StartsWith("diff ") || line.StartsWith("Index: "));
-                }
+                return line is not null && (line.StartsWith("diff ") || line.StartsWith("Index: "));
             }
             catch
             {

@@ -18,7 +18,7 @@ namespace GitCommands.ExternalLinks
 
         public ExternalLink Apply(Match? remoteMatch, Match? revisionMatch, GitRevision revision)
         {
-            var groups = new List<string>();
+            List<string> groups = new();
             AddGroupsFromMatches(remoteMatch);
             AddGroupsFromMatches(revisionMatch);
             var groupsArray = groups.ToArray<object>();
@@ -28,7 +28,7 @@ namespace GitCommands.ExternalLinks
             try
             {
                 caption = string.Format(Caption, groupsArray);
-                Assumes.NotNull(Format);
+                Validates.NotNull(Format);
                 uri = Format.Replace("%COMMIT_HASH%", revision.Guid);
                 uri = string.Format(uri, groupsArray);
                 IsValid = true;

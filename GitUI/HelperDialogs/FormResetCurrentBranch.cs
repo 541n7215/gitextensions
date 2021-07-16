@@ -10,9 +10,9 @@ namespace GitUI.HelperDialogs
 {
     public partial class FormResetCurrentBranch : GitModuleForm
     {
-        private readonly TranslationString _branchInfo = new TranslationString("Reset branch '{0}' to revision:");
-        private readonly TranslationString _resetHardWarning = new TranslationString("You are about to discard ALL local changes, are you sure?");
-        private readonly TranslationString _resetCaption = new TranslationString("Reset branch");
+        private readonly TranslationString _branchInfo = new("Reset branch '{0}' to revision:");
+        private readonly TranslationString _resetHardWarning = new("You are about to discard ALL local changes, are you sure?");
+        private readonly TranslationString _resetCaption = new("Reset branch");
 
         public enum ResetType
         {
@@ -24,10 +24,12 @@ namespace GitUI.HelperDialogs
         }
 
         public static FormResetCurrentBranch Create(GitUICommands commands, GitRevision revision, ResetType resetType = ResetType.Mixed)
-            => new FormResetCurrentBranch(commands, revision ?? throw new NotSupportedException(Strings.NoRevision), resetType);
+            => new(commands, revision ?? throw new NotSupportedException(TranslatedStrings.NoRevision), resetType);
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormResetCurrentBranch()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -65,7 +67,7 @@ namespace GitUI.HelperDialogs
             }
         }
 
-        public GitRevision Revision { get; set; }
+        public GitRevision Revision { get; }
 
         private void FormResetCurrentBranch_Load(object sender, EventArgs e)
         {
@@ -124,7 +126,7 @@ namespace GitUI.HelperDialogs
 
         private void FormResetCurrentBranch_HelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            string helpSection = default;
+            string? helpSection = default;
             if (Soft.Checked)
             {
                 helpSection = "--soft";

@@ -1,34 +1,37 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Forms;
 using GitCommands;
+using GitExtUtils;
 using GitUI.UserControls;
-using JetBrains.Annotations;
 
 namespace GitUI.HelperDialogs
 {
-    /// <param name="isError">if command finished with error</param>
-    /// <param name="form">this form</param>
-    /// <returns>if handled</returns>
+    /// <param name="isError">if command finished with error.</param>
+    /// <param name="form">this form.</param>
+    /// <returns>if handled.</returns>
     public delegate bool HandleOnExit(ref bool isError, FormProcess form);
 
     public class FormProcess : FormStatus
     {
         public string Remote { get; set; }
-        public string ProcessString { get; set; }
+        public string ProcessString { get; }
         public string ProcessArguments { get; set; }
-        public string ProcessInput { get; set; }
+        public string? ProcessInput { get; }
         public readonly string WorkingDirectory;
-        public HandleOnExit HandleOnExitCallback { get; set; }
-        public readonly Dictionary<string, string> ProcessEnvVariables = new Dictionary<string, string>();
+        public HandleOnExit? HandleOnExitCallback { get; set; }
+        public readonly Dictionary<string, string> ProcessEnvVariables = new();
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private protected FormProcess()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
             : base()
         {
         }
 
-        private FormProcess(GitUICommands commands, ConsoleOutputControl outputControl, [CanBeNull] string process, ArgumentString arguments, string workingDirectory, string input, bool useDialogSettings)
+        private FormProcess(GitUICommands? commands, ConsoleOutputControl? outputControl, string? process, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings)
             : base(commands, outputControl, useDialogSettings)
         {
             ProcessCallback = ProcessStart;
@@ -49,27 +52,27 @@ namespace GitUI.HelperDialogs
             ConsoleOutput.DataReceived += DataReceivedCore;
         }
 
-        public FormProcess(GitUICommands commands, string process, ArgumentString arguments, string workingDirectory, string input, bool useDialogSettings)
+        public FormProcess(GitUICommands? commands, string? process, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings)
             : this(commands, outputControl: null, process, arguments, workingDirectory, input, useDialogSettings)
         {
         }
 
-        public static bool ShowDialog([CanBeNull] IWin32Window owner, string process, ArgumentString arguments, string workingDirectory, string input, bool useDialogSettings)
+        public static bool ShowDialog(IWin32Window? owner, string? process, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings)
         {
-            using (var formProcess = new FormProcess(commands: null, process, arguments, workingDirectory, input, useDialogSettings))
-            {
-                formProcess.ShowDialog(owner);
-                return !formProcess.ErrorOccurred();
-            }
+            Debug.Assert(owner is not null, "Progress window must be owned by another window! This is a bug, please correct and send a pull request with a fix.");
+
+            using FormProcess formProcess = new(commands: null, process, arguments, workingDirectory, input, useDialogSettings);
+            formProcess.ShowDialog(owner);
+            return !formProcess.ErrorOccurred();
         }
 
-        public static string ReadDialog([CanBeNull] IWin32Window owner, string process, ArgumentString arguments, string workingDirectory, string input, bool useDialogSettings)
+        public static string ReadDialog(IWin32Window? owner, string? process, ArgumentString arguments, string workingDirectory, string? input, bool useDialogSettings)
         {
-            using (var formProcess = new FormProcess(commands: null, process, arguments, workingDirectory, input, useDialogSettings))
-            {
-                formProcess.ShowDialog(owner);
-                return formProcess.GetOutputString();
-            }
+            Debug.Assert(owner is not null, "Progress window must be owned by another window! This is a bug, please correct and send a pull request with a fix.");
+
+            using FormProcess formProcess = new(commands: null, process, arguments, workingDirectory, input, useDialogSettings);
+            formProcess.ShowDialog(owner);
+            return formProcess.GetOutputString();
         }
 
         protected virtual void BeforeProcessStart()
@@ -136,7 +139,7 @@ namespace GitUI.HelperDialogs
             {
                 ConsoleOutput.KillProcess();
 
-                var module = new GitModule(WorkingDirectory);
+                GitModule module = new(WorkingDirectory);
                 module.UnlockIndex(includeSubmodules: true);
             }
             catch
@@ -145,8 +148,8 @@ namespace GitUI.HelperDialogs
             }
         }
 
-        /// <param name="isError">if command finished with error</param>
-        /// <returns>if handled</returns>
+        /// <param name="isError">if command finished with error.</param>
+        /// <returns>if handled.</returns>
         protected virtual bool HandleOnExit(ref bool isError)
         {
             return HandleOnExitCallback is not null && HandleOnExitCallback(ref isError, this);

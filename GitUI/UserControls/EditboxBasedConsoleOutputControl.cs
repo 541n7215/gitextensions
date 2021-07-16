@@ -7,7 +7,6 @@ using System.Windows.Forms;
 using GitCommands;
 using GitCommands.Git.Extensions;
 using GitCommands.Logging;
-using JetBrains.Annotations;
 
 namespace GitUI.UserControls
 {
@@ -20,9 +19,9 @@ namespace GitUI.UserControls
 
         private int _exitcode;
 
-        private Process _process;
+        private Process? _process;
 
-        [CanBeNull] private ProcessOutputThrottle _outputThrottle;
+        private ProcessOutputThrottle? _outputThrottle;
 
         public EditboxBasedConsoleOutputControl()
         {
@@ -109,7 +108,7 @@ namespace GitUI.UserControls
 
                 // process used to execute external commands
                 var outputEncoding = GitModule.SystemEncoding;
-                var startInfo = new ProcessStartInfo
+                ProcessStartInfo startInfo = new()
                 {
                     UseShellExecute = false,
                     ErrorDialog = false,
@@ -129,7 +128,7 @@ namespace GitUI.UserControls
                     startInfo.EnvironmentVariables.Add(name, value);
                 }
 
-                var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+                Process process = new() { StartInfo = startInfo, EnableRaisingEvents = true };
 
                 process.OutputDataReceived += (sender, args) => FireDataReceived(new TextEventArgs((args.Data ?? "") + '\n'));
                 process.ErrorDataReceived += (sender, args) => FireDataReceived(new TextEventArgs((args.Data ?? "") + '\n'));
@@ -197,7 +196,7 @@ namespace GitUI.UserControls
 
         private sealed class ProcessOutputThrottle : IDisposable
         {
-            private readonly StringBuilder _textToAdd = new StringBuilder();
+            private readonly StringBuilder _textToAdd = new();
             private readonly Timer _timer;
             private readonly Action<string> _doOutput;
 

@@ -6,17 +6,17 @@ namespace GitUIPluginInterfaces
 {
     public class CredentialsSetting : CredentialsManager, ISetting
     {
-        public CredentialsSetting(string name, string caption, Func<string> getWorkingDir)
+        public CredentialsSetting(string name, string caption, Func<string?> getWorkingDir)
             : base(getWorkingDir)
         {
             Name = name;
             Caption = caption;
         }
 
-        private readonly NetworkCredential _defaultValue = new NetworkCredential();
+        private readonly NetworkCredential _defaultValue = new();
         public string Name { get; }
         public string Caption { get; }
-        public CredentialsControl CustomControl { get; set; }
+        public CredentialsControl? CustomControl { get; set; }
 
         public NetworkCredential GetValueOrDefault(ISettingsSource settings)
         {
@@ -47,7 +47,7 @@ namespace GitUIPluginInterfaces
 
         private class CredentialsControlBinding : SettingControlBinding<CredentialsSetting, CredentialsControl>
         {
-            public CredentialsControlBinding(CredentialsSetting setting, CredentialsControl control)
+            public CredentialsControlBinding(CredentialsSetting setting, CredentialsControl? control)
                 : base(setting, control)
             {
             }

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Windows.Forms;
-using GitCommands.Statistics;
 using GitUI;
 using GitUIPluginInterfaces;
 using ResourceManager;
 
-namespace GitImpact
+namespace GitExtensions.Plugins.GitImpact
 {
     public sealed partial class FormImpact : GitExtensionsFormBase
     {
-        private readonly TranslationString _authorCommits = new TranslationString("{0} ({1} Commits, {2} Changed Lines)");
+        private readonly TranslationString _authorCommits = new("{0} ({1} Commits, {2} Changed Lines)");
 
         public FormImpact(IGitModule module)
         {

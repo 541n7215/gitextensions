@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using GitCommands;
+using GitExtUtils;
 using GitUI.HelperDialogs;
 using GitUIPluginInterfaces;
+using Microsoft;
 using ResourceManager;
 
 namespace GitUI
 {
     public partial class BranchComboBox : GitExtensionsControl
     {
-        private readonly TranslationString _branchCheckoutError = new TranslationString("Branch '{0}' is not selectable, this branch has been removed from the selection.");
+        private readonly TranslationString _branchCheckoutError = new("Branch '{0}' is not selectable, this branch has been removed from the selection.");
 
         public BranchComboBox()
         {
@@ -21,8 +23,8 @@ namespace GitUI
             branches.DisplayMember = nameof(IGitRef.Name);
         }
 
-        private IReadOnlyList<IGitRef> _branchesToSelect;
-        public IReadOnlyList<IGitRef> BranchesToSelect
+        private IReadOnlyList<IGitRef>? _branchesToSelect;
+        public IReadOnlyList<IGitRef>? BranchesToSelect
         {
             get
             {
@@ -45,12 +47,12 @@ namespace GitUI
 
         public IEnumerable<IGitRef> GetSelectedBranches()
         {
-            foreach (string branch in branches.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string branch in branches.Text.LazySplit(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 var gitHead = _branchesToSelect.FirstOrDefault(g => g.Name == branch);
                 if (gitHead is null)
                 {
-                    MessageBox.Show(string.Format(_branchCheckoutError.Text, branch), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(string.Format(_branchCheckoutError.Text, branch), TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 else
                 {
@@ -76,7 +78,9 @@ namespace GitUI
 
         private void selectMultipleBranchesButton_Click(object sender, EventArgs e)
         {
-            using var formSelectMultipleBranches = new FormSelectMultipleBranches(_branchesToSelect);
+            Validates.NotNull(_branchesToSelect);
+
+            using FormSelectMultipleBranches formSelectMultipleBranches = new(_branchesToSelect);
             foreach (var branch in GetSelectedBranches())
             {
                 formSelectMultipleBranches.SelectBranch(branch.Name);

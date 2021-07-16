@@ -11,8 +11,8 @@ namespace GitUI.CommandsDialogs
 {
     public partial class FormCheckoutRevision : GitModuleForm
     {
-        private readonly TranslationString _noRevisionSelectedMsgBox = new TranslationString("Select 1 revision to checkout.");
-        private readonly TranslationString _noRevisionSelectedMsgBoxCaption = new TranslationString("Checkout");
+        private readonly TranslationString _noRevisionSelectedMsgBox = new("Select 1 revision to checkout.");
+        private readonly TranslationString _noRevisionSelectedMsgBoxCaption = new("Checkout");
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
         private FormCheckoutRevision()
@@ -27,7 +27,7 @@ namespace GitUI.CommandsDialogs
             InitializeComplete();
         }
 
-        public void SetRevision(string commitHash)
+        public void SetRevision(string? commitHash)
         {
             commitPickerSmallControl1.SetSelectedCommitHash(commitHash);
         }
@@ -48,10 +48,14 @@ namespace GitUI.CommandsDialogs
 
                 Debug.Assert(checkedOutObjectId is not null, "checkedOutObjectId is not null");
 
-                ScriptManager.RunEventScripts(this, ScriptEvent.BeforeCheckout);
+                bool success = ScriptManager.RunEventScripts(this, ScriptEvent.BeforeCheckout);
+                if (!success)
+                {
+                    return;
+                }
 
                 string command = GitCommandHelpers.CheckoutCmd(selectedObjectId.ToString(), Force.Checked ? LocalChangesAction.Reset : 0);
-                bool success = FormProcess.ShowDialog(this, process: null, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
+                success = FormProcess.ShowDialog(this, process: null, arguments: command, Module.WorkingDir, input: null, useDialogSettings: true);
                 if (success)
                 {
                     if (selectedObjectId != checkedOutObjectId)

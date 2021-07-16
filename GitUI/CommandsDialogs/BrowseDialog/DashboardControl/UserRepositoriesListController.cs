@@ -10,7 +10,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
 {
     public interface IUserRepositoriesListController
     {
-        Task AssignCategoryAsync(Repository repository, string category);
+        Task AssignCategoryAsync(Repository repository, string? category);
         string GetCurrentBranchName(string path);
         bool IsValidGitWorkingDir(string path);
         (IReadOnlyList<RecentRepoInfo> recentRepositories, IReadOnlyList<RecentRepoInfo> favouriteRepositories) PreRenderRepositories(Graphics g);
@@ -28,7 +28,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
             _invalidRepositoryRemover = invalidRepositoryRemover;
         }
 
-        public async Task AssignCategoryAsync(Repository repository, string category)
+        public async Task AssignCategoryAsync(Repository repository, string? category)
         {
             if (repository is null)
             {
@@ -55,10 +55,10 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
 
         public (IReadOnlyList<RecentRepoInfo> recentRepositories, IReadOnlyList<RecentRepoInfo> favouriteRepositories) PreRenderRepositories(Graphics g)
         {
-            var mostRecentRepos = new List<RecentRepoInfo>();
-            var lessRecentRepos = new List<RecentRepoInfo>();
+            List<RecentRepoInfo> mostRecentRepos = new();
+            List<RecentRepoInfo> lessRecentRepos = new();
 
-            var splitter = new RecentRepoSplitter
+            RecentRepoSplitter splitter = new()
             {
                 Graphics = g,
                 MeasureFont = AppSettings.Font,

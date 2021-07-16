@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
+using Microsoft;
 using Newtonsoft.Json;
 
 namespace AzureDevOpsIntegration
@@ -57,22 +57,19 @@ namespace AzureDevOpsIntegration
 
         private async Task<T> HttpGetAsync<T>(string url)
         {
-            using (var response = await _httpClient.GetAsync(url))
+            using var response = await _httpClient.GetAsync(url);
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
-                {
-                    throw new UnauthorizedAccessException();
-                }
-
-                response.EnsureSuccessStatusCode();
-                string json = await response.Content.ReadAsStringAsync();
-
-                return JsonConvert.DeserializeObject<T>(json);
+                throw new UnauthorizedAccessException();
             }
+
+            response.EnsureSuccessStatusCode();
+            string json = await response.Content.ReadAsStringAsync();
+
+            return JsonConvert.DeserializeObject<T>(json);
         }
 
-        [ItemCanBeNull]
-        public async Task<string> GetBuildDefinitionsAsync(string buildDefinitionNameFilter)
+        public async Task<string?> GetBuildDefinitionsAsync(string buildDefinitionNameFilter)
         {
             var isNotFiltered = string.IsNullOrWhiteSpace(buildDefinitionNameFilter);
             var buildDefinitionUriFilter = isNotFiltered ? string.Empty : "&name=" + buildDefinitionNameFilter;
@@ -89,12 +86,11 @@ namespace AzureDevOpsIntegration
 
             buildDefinitions = await HttpGetAsync<ListWrapper<BuildDefinition>>(BuildDefinitionsUrl);
 
-            var tfsBuildDefinitionNameFilter = new Regex(buildDefinitionNameFilter, RegexOptions.Compiled);
+            Regex tfsBuildDefinitionNameFilter = new(buildDefinitionNameFilter, RegexOptions.Compiled);
             return GetBuildDefinitionsIds(buildDefinitions.Value.Where(b => tfsBuildDefinitionNameFilter.IsMatch(b.Name)));
         }
 
-        [CanBeNull]
-        private static string GetBuildDefinitionsIds(IEnumerable<BuildDefinition> buildDefinitions)
+        private static string? GetBuildDefinitionsIds(IEnumerable<BuildDefinition>? buildDefinitions)
         {
             if (buildDefinitions is not null && buildDefinitions.Any())
             {
@@ -110,10 +106,10 @@ namespace AzureDevOpsIntegration
         /// <param name="buildId">
         /// The id of the build to get the build definition name for.
         /// </param>
-        public async Task<string> GetBuildDefinitionNameFromIdAsync(int buildId)
+        public async Task<string?> GetBuildDefinitionNameFromIdAsync(int buildId)
         {
             var build = await HttpGetAsync<Build>($"build/builds/{buildId}?api-version=2.0");
-            return build.Definition.Name;
+            return build.Definition?.Name;
         }
 
         public async Task<IList<Build>> QueryFinishedBuildsAsync(string buildDefinitionsToQuery, DateTime? sinceDate)
@@ -124,6 +120,7 @@ namespace AzureDevOpsIntegration
                 : "&api-version=2.0";
 
             var finishedBuilds = (await HttpGetAsync<ListWrapper<Build>>(queryUrl)).Value;
+            Validates.NotNull(finishedBuilds);
             return finishedBuilds;
         }
 
@@ -132,7 +129,7 @@ namespace AzureDevOpsIntegration
             string queryUrl = QueryForBuildStatus(buildDefinitionsToQuery, "cancelling,inProgress,none,notStarted,postponed") + "&api-version=2.0";
 
             var runningBuilds = (await HttpGetAsync<ListWrapper<Build>>(queryUrl)).Value;
-
+            Validates.NotNull(runningBuilds);
             return runningBuilds;
         }
 
@@ -150,21 +147,21 @@ namespace AzureDevOpsIntegration
     internal class ListWrapper<T>
     {
         public int Count { get; set; }
-        public IList<T> Value { get; set; }
+        public IList<T>? Value { get; set; }
     }
 
     internal class Project
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Url { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Url { get; set; }
     }
 
     public class BuildDefinition
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Url { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Url { get; set; }
     }
 
     /// <summary>
@@ -180,12 +177,12 @@ namespace AzureDevOpsIntegration
         public const string StatusNotStarted = "notStarted"; // The build has not yet started.
         public const string StatusPostponed = "postponed"; // The build is inactive in the queue.
 
-        public string SourceVersion { get; set; }
-        public string Status { get; set; }
-        public string BuildNumber { get; set; }
-        public string Result { get; set; }
-        public BuildDefinition Definition { get; set; }
-        public BuildLinks _links { get; set; }
+        public string? SourceVersion { get; set; }
+        public string? Status { get; set; }
+        public string? BuildNumber { get; set; }
+        public string? Result { get; set; }
+        public BuildDefinition? Definition { get; set; }
+        public BuildLinks? _links { get; set; }
         public DateTime? StartTime { get; set; }
         public DateTime? FinishTime { get; set; }
 
@@ -194,11 +191,11 @@ namespace AzureDevOpsIntegration
 
     public class BuildLinks
     {
-        public Link Web { get; set; }
+        public Link? Web { get; set; }
     }
 
     public class Link
     {
-        public string Href { get; set; }
+        public string? Href { get; set; }
     }
 }

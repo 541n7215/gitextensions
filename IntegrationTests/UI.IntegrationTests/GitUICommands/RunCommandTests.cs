@@ -48,6 +48,12 @@ namespace GitUITests.GitUICommandsTests
             _commands = new GitUICommands(_referenceRepository.Module);
         }
 
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            AppSettings.SetDocumentationBaseUrl("master");
+        }
+
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
@@ -175,7 +181,7 @@ namespace GitUITests.GitUICommandsTests
         {
             var expectedTab = command.Contains("blame") ? "Blame" : "Diff";
 
-            var args = new System.Collections.Generic.List<string> { "ge.exe", command, "filename" };
+            System.Collections.Generic.List<string> args = new() { "ge.exe", command, "filename" };
             if (commit)
             {
                 args.Add(_referenceRepository.CommitHash);
@@ -204,7 +210,7 @@ namespace GitUITests.GitUICommandsTests
             };
             (bool commitValid, bool filter, bool filterValid) = invalidVariants[invalidVariant];
 
-            var args = new System.Collections.Generic.List<string> { "ge.exe", command, "filename" };
+            System.Collections.Generic.List<string> args = new() { "ge.exe", command, "filename" };
             args.Add(commitValid ? _referenceRepository.CommitHash : "no-commit");
             if (filter)
             {
@@ -346,10 +352,7 @@ namespace GitUITests.GitUICommandsTests
                 showForm: () => _commands.GetTestAccessor().RunCommandBasedOnArgument(args).Should().Be(expectedResult),
                 runTestAsync: form =>
                 {
-                    if (runTest is not null)
-                    {
-                        runTest(form);
-                    }
+                    runTest?.Invoke(form);
 
                     return Task.CompletedTask;
                 });

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using GitExtensions;
 using GitUIPluginInterfaces;
 
 namespace GitCommands.Git
@@ -16,13 +15,13 @@ namespace GitCommands.Git
 
     public sealed class GitTreeParser : IGitTreeParser
     {
-        private static readonly Regex _treeLineRegex = new Regex(
+        private static readonly Regex _treeLineRegex = new(
             @"^(?<mode>\d{6}) (?<type>(blob|tree|commit)+) (?<objectid>[0-9a-f]{40})\s+(?<name>.+)$",
             RegexOptions.Compiled);
 
         public IEnumerable<GitItem> Parse(string? tree)
         {
-            if (Strings.IsNullOrWhiteSpace(tree))
+            if (string.IsNullOrWhiteSpace(tree))
             {
                 return Enumerable.Empty<GitItem>();
             }
@@ -38,7 +37,7 @@ namespace GitCommands.Git
             // 100644 blob 5b0965cd097b8c48b66dd456337852640fa429c8    stylecop.json
 
             // Split on \0 too, as GitModule.GetTree uses `ls-tree -z` which uses null terminators
-            var items = tree.Split('\0', '\n');
+            var items = tree.Split(Delimiters.NullAndLineFeed);
 
             return items.Select(ParseSingle).Where(item => item is not null)!;
         }

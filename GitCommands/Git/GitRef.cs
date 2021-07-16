@@ -126,7 +126,7 @@ namespace GitCommands
 
         public bool IsOther => !IsHead && !IsRemote && !IsTag;
 
-        public string LocalName => IsRemote ? Name.Substring(Remote.Length + 1) : Name;
+        public string LocalName => IsRemote && Name.StartsWith($"{Remote}/") ? Name.Substring(Remote.Length + 1) : Name;
 
         public string Remote { get; }
 
@@ -202,7 +202,8 @@ namespace GitCommands
             return refs
                 .GroupBy(r => r.Name)
                 .Where(group => group.Count() > 1)
-                .ToHashSet(e => e.Key);
+                .Select(e => e.Key)
+                .ToHashSet();
         }
 
         public bool IsTrackingRemote(IGitRef? remote)

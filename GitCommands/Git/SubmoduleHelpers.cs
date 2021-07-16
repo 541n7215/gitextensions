@@ -3,7 +3,6 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using GitCommands.Patches;
-using GitExtensions;
 using GitUIPluginInterfaces;
 using Microsoft;
 
@@ -11,9 +10,9 @@ namespace GitCommands.Git
 {
     public static class SubmoduleHelpers
     {
-        public static GitSubmoduleStatus? GetCurrentSubmoduleChangesAsync(GitModule module, string? fileName, string? oldFileName, ObjectId? firstId, ObjectId? secondId)
+        public static async Task<GitSubmoduleStatus?> GetCurrentSubmoduleChangesAsync(GitModule module, string? fileName, string? oldFileName, ObjectId? firstId, ObjectId? secondId)
         {
-            Patch? patch = module.GetSingleDiff(firstId, secondId, fileName, oldFileName, "", GitModule.SystemEncoding, true);
+            Patch? patch = await module.GetSingleDiffAsync(firstId, secondId, fileName, oldFileName, "", GitModule.SystemEncoding, cacheResult: true).ConfigureAwait(false);
             return ParseSubmodulePatchStatus(patch, module, fileName);
         }
 
@@ -43,7 +42,7 @@ namespace GitCommands.Git
         [return: NotNullIfNotNull("text")]
         public static GitSubmoduleStatus? ParseSubmoduleStatus(string? text, GitModule module, string? fileName)
         {
-            if (Strings.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(text))
             {
                 return null;
             }
@@ -126,12 +125,12 @@ namespace GitCommands.Git
                 else
                 {
                     var submodule = module.GetSubmodule(fileName);
-                    addedCommits = submodule.GetCommitCount(commitId.ToString(), oldCommitId.ToString());
-                    removedCommits = submodule.GetCommitCount(oldCommitId.ToString(), commitId.ToString());
+                    addedCommits = submodule.GetCommitCount(commitId.ToString(), oldCommitId.ToString(), cache: true);
+                    removedCommits = submodule.GetCommitCount(oldCommitId.ToString(), commitId.ToString(), cache: true);
                 }
             }
 
-            Assumes.NotNull(name);
+            Validates.NotNull(name);
 
             return new GitSubmoduleStatus(name, oldName, isDirty, commitId, oldCommitId, addedCommits, removedCommits);
         }

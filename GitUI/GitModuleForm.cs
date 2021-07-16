@@ -1,10 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms;
 using GitCommands;
 using GitUI.Infrastructure.Telemetry;
 using GitUI.Script;
-using JetBrains.Annotations;
 
 namespace GitUI
 {
@@ -14,16 +14,16 @@ namespace GitUI
     public class GitModuleForm : GitExtensionsForm, IGitUICommandsSource
     {
         /// <inheritdoc />
-        public event EventHandler<GitUICommandsChangedEventArgs> UICommandsChanged;
+        public event EventHandler<GitUICommandsChangedEventArgs>? UICommandsChanged;
 
         /// <summary>
         /// Indicates that the process is run by unit tests runner.
         /// </summary>
         internal static bool IsUnitTestActive { get; set; }
 
-        public virtual RevisionGridControl RevisionGridControl { get => null; }
+        public virtual RevisionGridControl? RevisionGridControl { get => null; }
 
-        [CanBeNull] private GitUICommands _uiCommands;
+        private GitUICommands? _uiCommands;
 
         /// <inheritdoc />
         [Browsable(false)]
@@ -47,7 +47,6 @@ namespace GitUI
         }
 
         /// <summary>Gets a <see cref="GitModule"/> reference.</summary>
-        [NotNull]
         [Browsable(false)]
         public GitModule Module => UICommands.Module;
 
@@ -61,7 +60,7 @@ namespace GitUI
             }
         }
 
-        protected GitModuleForm([NotNull] GitUICommands commands, bool enablePositionRestore)
+        protected GitModuleForm(GitUICommands? commands, bool enablePositionRestore)
             : base(enablePositionRestore)
         {
             _uiCommands = commands;

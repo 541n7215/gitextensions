@@ -6,17 +6,17 @@ using GitCommands.Git;
 using GitCommands.Gpg;
 using GitCommands.UserRepositoryHistory;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 
 namespace GitUI.CommandsDialogs
 {
     public interface IFormBrowseController
     {
-        void AddRecentRepositories([NotNull] ToolStripDropDownItem menuItemContainer,
-                                   [NotNull] Repository repo,
-                                   [NotNull] string caption,
-                                   [NotNull] Action<object, GitModuleEventArgs> setGitModule);
-        Task<GpgInfo> LoadGpgInfoAsync(GitRevision revision);
+        void AddRecentRepositories(ToolStripDropDownItem menuItemContainer,
+                                   Repository repo,
+                                   string? caption,
+                                   Action<object, GitModuleEventArgs> setGitModule);
+
+        Task<GpgInfo?> LoadGpgInfoAsync(GitRevision? revision);
     }
 
     public class FormBrowseController : IFormBrowseController
@@ -34,13 +34,13 @@ namespace GitUI.CommandsDialogs
             _invalidRepositoryRemover = invalidRepositoryRemover;
         }
 
-        public void AddRecentRepositories([NotNull] ToolStripDropDownItem menuItemContainer,
-                                          [NotNull] Repository repo,
-                                          [NotNull] string caption,
-                                          [NotNull] Action<object, GitModuleEventArgs> setGitModule)
+        public void AddRecentRepositories(ToolStripDropDownItem menuItemContainer,
+                                          Repository repo,
+                                          string? caption,
+                                          Action<object, GitModuleEventArgs> setGitModule)
         {
             string branchName = _repositoryCurrentBranchNameProvider.GetCurrentBranchName(repo.Path);
-            var item = new ToolStripMenuItem(caption)
+            ToolStripMenuItem item = new(caption)
             {
                 DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
                 ShortcutKeyDisplayString = branchName
@@ -59,8 +59,7 @@ namespace GitUI.CommandsDialogs
             }
         }
 
-        [ItemCanBeNull]
-        public async Task<GpgInfo> LoadGpgInfoAsync(GitRevision revision)
+        public async Task<GpgInfo?> LoadGpgInfoAsync(GitRevision? revision)
         {
             if (!AppSettings.ShowGpgInformation.Value || revision?.ObjectId is null)
             {
@@ -88,7 +87,7 @@ namespace GitUI.CommandsDialogs
 
         private void ChangeWorkingDir(string path, Action<object, GitModuleEventArgs> setGitModule)
         {
-            var module = new GitModule(path);
+            GitModule module = new(path);
             if (module.IsValidGitWorkingDir())
             {
                 setGitModule(this, new GitModuleEventArgs(module));

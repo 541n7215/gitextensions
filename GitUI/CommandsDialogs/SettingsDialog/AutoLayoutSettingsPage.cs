@@ -8,12 +8,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
 {
     public abstract partial class AutoLayoutSettingsPage : RepoDistSettingsPage, ISettingsLayout
     {
-        private ISettingsLayout _settingsLayout;
-
-        protected override ISettingsSource GetCurrentSettings()
-        {
-            return CurrentSettings;
-        }
+        private ISettingsLayout? _settingsLayout;
 
         protected virtual ISettingsLayout GetSettingsLayout()
         {
@@ -123,7 +118,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog
 
             if (caption is not null)
             {
-                var label = new Label
+                Label label = new()
                 {
                     Text = controlBinding.Caption(),
                     AutoSize = true,

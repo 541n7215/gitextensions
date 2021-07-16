@@ -4,7 +4,7 @@ using GitCommands;
 using GitExtUtils;
 using GitUIPluginInterfaces;
 
-namespace CreateLocalBranches
+namespace GitExtensions.Plugins.CreateLocalBranches
 {
     public partial class CreateLocalBranchesForm : ResourceManager.GitExtensionsFormBase
     {
@@ -20,7 +20,7 @@ namespace CreateLocalBranches
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var args = new GitArgumentBuilder("branch") { "-a" };
+            GitArgumentBuilder args = new("branch") { "-a" };
             string[] references = _gitUiCommands.GitModule.GitExecutable.GetOutput(args)
                 .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 

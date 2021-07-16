@@ -1,15 +1,21 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- To be removed when NRT annotations are complete -->
+    <Nullable>annotations</Nullable>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\GitExtUtils\Delimiters.cs" Link="Utils\Delimiters.cs" />
+    <Compile Include="..\GitExtUtils\LazyStringSplit.cs" Link="Utils\LazyStringSplit.cs" />
+    <Compile Include="..\GitExtUtils\Validates.cs" Link="Utils\Validates.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="SmartFormat.NET" Version="$(SmartFormatNETVersion)" />
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="SmartFormat.NET" />
   </ItemGroup>
 
   <ItemGroup>

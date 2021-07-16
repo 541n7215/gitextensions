@@ -10,7 +10,7 @@ namespace GitCommands
     {
         public event EventHandler<AsyncErrorEventArgs>? LoadingError;
 
-        private readonly CancellationTokenSequence _cancellationSequence = new CancellationTokenSequence();
+        private readonly CancellationTokenSequence _cancellationSequence = new();
 
         private int _disposed;
 
@@ -30,20 +30,20 @@ namespace GitCommands
         public async Task LoadAsync(Action<CancellationToken> loadContent, Action onLoaded)
         {
             await LoadAsync(
-                (token) =>
+                token =>
                 {
                     loadContent(token);
-                    return string.Empty;
+                    return (object?)null;
                 },
                 _ => onLoaded());
         }
 
-        public Task<T?> LoadAsync<T>(Func<T> loadContent, Action<T?> onLoaded)
+        public Task LoadAsync<T>(Func<T> loadContent, Action<T> onLoaded)
         {
             return LoadAsync(token => loadContent(), onLoaded);
         }
 
-        public async Task<T?> LoadAsync<T>(Func<CancellationToken, T> loadContent, Action<T?> onLoaded)
+        public async Task LoadAsync<T>(Func<CancellationToken, T> loadContent, Action<T> onLoaded)
         {
             if (Volatile.Read(ref _disposed) != 0)
             {
@@ -73,19 +73,17 @@ namespace GitCommands
                 // Bail early if cancelled, returning default value for type
                 if (token.IsCancellationRequested)
                 {
-                    result = default;
+                    return;
                 }
-                else
-                {
-                    // Load content
-                    result = loadContent(token);
-                }
+
+                // Load content
+                result = loadContent(token);
             }
             catch (Exception e)
             {
                 if (e is OperationCanceledException && token.IsCancellationRequested)
                 {
-                    return default;
+                    return;
                 }
 
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -95,7 +93,7 @@ namespace GitCommands
                     throw;
                 }
 
-                return default;
+                return;
             }
 
             try
@@ -119,17 +117,13 @@ namespace GitCommands
                     {
                         throw;
                     }
-
-                    return default;
                 }
             }
-
-            return result;
         }
 
         private bool OnLoadingError(Exception exception)
         {
-            var args = new AsyncErrorEventArgs(exception);
+            AsyncErrorEventArgs args = new(exception);
             LoadingError?.Invoke(this, args);
             return args.Handled;
         }

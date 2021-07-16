@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using GitExtUtils.GitUI;
-using GitExtUtils.GitUI.Theming;
 
 namespace GitUI
 {
@@ -70,7 +69,7 @@ namespace GitUI
 
                     case SplitContainer splitContainer:
                     {
-                        const int splitterWidth = 8;
+                        const int splitterWidth = 6;
 
                         if (!isDpiScaled)
                         {
@@ -82,7 +81,7 @@ namespace GitUI
                             splitContainer.SplitterWidth = DpiUtil.Scale(splitterWidth);
                         }
 
-                        splitContainer.BackColor = ColorHelper.GetSplitterColor();
+                        splitContainer.BackColor = Color.Transparent;
                         break;
                     }
 

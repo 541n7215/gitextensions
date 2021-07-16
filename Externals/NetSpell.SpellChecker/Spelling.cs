@@ -21,12 +21,12 @@ namespace NetSpell.SpellChecker
     {
         #region Global Regex
         // Regex are class scope and compiled to improve performance on reuse
-        private readonly Regex _digitRegex = new Regex(@"^\d", RegexOptions.Compiled);
-        private readonly Regex _htmlRegex = new Regex(@"</[c-g\d]+>|</[i-o\d]+>|</[a\d]+>|</[q-z\d]+>|<[cg]+[^>]*>|<[i-o]+[^>]*>|<[q-z]+[^>]*>|<[a]+[^>]*>|<(\[^\]*\|'[^']*'|[^'\>])*>", RegexOptions.IgnoreCase & RegexOptions.Compiled);
+        private readonly Regex _digitRegex = new(@"^\d", RegexOptions.Compiled);
+        private readonly Regex _htmlRegex = new(@"</[c-g\d]+>|</[i-o\d]+>|</[a\d]+>|</[q-z\d]+>|<[cg]+[^>]*>|<[i-o]+[^>]*>|<[q-z]+[^>]*>|<[a]+[^>]*>|<(\[^\]*\|'[^']*'|[^'\>])*>", RegexOptions.IgnoreCase & RegexOptions.Compiled);
         private MatchCollection _htmlTags;
-        private readonly Regex _letterRegex = new Regex(@"\D", RegexOptions.Compiled);
-        private readonly Regex _upperRegex = new Regex(@"[^\p{Lu}]", RegexOptions.Compiled); // @"[^A-Z]
-        private readonly Regex _wordEx = new Regex(@"\b[\w']+\b", RegexOptions.Compiled); // @"\b[A-Za-z0-9_'À-ÿ]+\b"
+        private readonly Regex _letterRegex = new(@"\D", RegexOptions.Compiled);
+        private readonly Regex _upperRegex = new(@"[^\p{Lu}]", RegexOptions.Compiled); // @"[^A-Z]
+        private readonly Regex _wordEx = new(@"\b[\w']+\b", RegexOptions.Compiled); // @"\b[A-Za-z0-9_'À-ÿ]+\b"
         private MatchCollection _words;
 
         #endregion
@@ -267,11 +267,11 @@ namespace NetSpell.SpellChecker
 
         #endregion
 
-        #region ISpell Near Miss Suggetion methods
+        #region ISpell Near Miss Suggestion methods
 
         private void SuggestWord(string word, List<Word> tempSuggestion)
         {
-            var ws = new Word();
+            Word ws = new();
             ws.Text = word;
             ws.EditDistance = EditDistance(CurrentWord, word);
             tempSuggestion.Add(ws);
@@ -317,7 +317,7 @@ namespace NetSpell.SpellChecker
 
             for (int i = 0; i < CurrentWord.Length; i++)
             {
-                var tempWord = new StringBuilder(CurrentWord);
+                StringBuilder tempWord = new(CurrentWord);
                 for (int x = 0; x < tryme.Length; x++)
                 {
                     tempWord[i] = tryme[x];
@@ -339,7 +339,7 @@ namespace NetSpell.SpellChecker
             {
                 for (int i = 0; i < CurrentWord.Length; i++)
                 {
-                    var tempWord = new StringBuilder(CurrentWord);
+                    StringBuilder tempWord = new(CurrentWord);
                     tempWord.Remove(i, 1);
 
                     string word = tempWord.ToString();
@@ -362,7 +362,7 @@ namespace NetSpell.SpellChecker
             {
                 for (int x = 0; x < tryme.Length; x++)
                 {
-                    var tempWord = new StringBuilder(CurrentWord);
+                    StringBuilder tempWord = new(CurrentWord);
                     tempWord.Insert(i, tryme[x]);
 
                     string word = tempWord.ToString();
@@ -381,7 +381,7 @@ namespace NetSpell.SpellChecker
         {
             for (int i = 0; i < CurrentWord.Length - 1; i++)
             {
-                var tempWord = new StringBuilder(CurrentWord);
+                StringBuilder tempWord = new(CurrentWord);
 
                 char swap = tempWord[i];
                 tempWord[i] = tempWord[i + 1];
@@ -983,14 +983,14 @@ namespace NetSpell.SpellChecker
 
             Initialize();
 
-            var tempSuggestion = new List<Word>();
+            List<Word> tempSuggestion = new();
 
             if ((SuggestionMode == SuggestionEnum.PhoneticNearMiss
                 || SuggestionMode == SuggestionEnum.Phonetic)
                 && _dictionary.PhoneticRules.Count > 0)
             {
                 // generate phonetic code for possible root word
-                Dictionary<string, string> codes = new Dictionary<string, string>();
+                Dictionary<string, string> codes = new();
                 foreach (string tempWord in _dictionary.PossibleBaseWords)
                 {
                     string tempCode = _dictionary.PhoneticCode(tempWord);
@@ -1148,9 +1148,9 @@ namespace NetSpell.SpellChecker
         #region public properties
 
         private WordDictionary _dictionary;
-        private readonly HashSet<string> _autoCompleteWords = new HashSet<string>();
+        private readonly HashSet<string> _autoCompleteWords = new();
         private string _replacementWord = "";
-        private StringBuilder _text = new StringBuilder();
+        private StringBuilder _text = new();
         private int _wordIndex;
 
         /// <summary>

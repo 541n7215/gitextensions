@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using AdysTech.CredentialManager;
-using JetBrains.Annotations;
+using Microsoft;
 
 namespace GitUIPluginInterfaces
 {
@@ -14,14 +14,14 @@ namespace GitUIPluginInterfaces
 
     public class CredentialsManager : ICredentialsManager
     {
-        private static ConcurrentDictionary<string, NetworkCredential> Credentials { get; } = new ConcurrentDictionary<string, NetworkCredential>();
-        private readonly Func<string> _getWorkingDir;
+        private static ConcurrentDictionary<string, NetworkCredential?> Credentials { get; } = new ConcurrentDictionary<string, NetworkCredential?>();
+        private readonly Func<string?>? _getWorkingDir;
 
         public CredentialsManager()
         {
         }
 
-        protected CredentialsManager(Func<string> getWorkingDir)
+        protected CredentialsManager(Func<string?> getWorkingDir)
         {
             _getWorkingDir = getWorkingDir;
         }
@@ -36,15 +36,20 @@ namespace GitUIPluginInterfaces
 
             Credentials.Clear();
 
-            foreach (var networkCredentials in credentials.Where(c => c.Value is not null))
+            foreach (var networkCredentials in credentials)
             {
+                if (networkCredentials.Value is null)
+                {
+                    continue;
+                }
+
                 AdysTechCredentialManagerWrapper.UpdateCredentials(networkCredentials.Key,
                     networkCredentials.Value.UserName,
                     networkCredentials.Value.Password);
             }
         }
 
-        protected NetworkCredential GetCredentialOrDefault(SettingLevel settingLevel, [NotNull] string name, NetworkCredential defaultValue)
+        protected NetworkCredential GetCredentialOrDefault(SettingLevel settingLevel, string name, NetworkCredential defaultValue)
         {
             var targetName = GetWindowsCredentialsTarget(name, settingLevel);
             if (string.IsNullOrWhiteSpace(targetName))
@@ -60,19 +65,21 @@ namespace GitUIPluginInterfaces
             return defaultValue;
         }
 
-        protected void SetCredentials(SettingLevel settingLevel, [NotNull] string name, [CanBeNull] NetworkCredential value)
+        protected void SetCredentials(SettingLevel settingLevel, string name, NetworkCredential? value)
         {
             var targetName = GetWindowsCredentialsTarget(name, settingLevel);
+            Validates.NotNull(targetName);
             Credentials.AddOrUpdate(targetName, value, (s, credential) => value);
         }
 
-        private string GetWindowsCredentialsTarget(string name, SettingLevel settingLevel)
+        private string? GetWindowsCredentialsTarget(string name, SettingLevel settingLevel)
         {
             if (settingLevel == SettingLevel.Global)
             {
                 return $"{name}";
             }
 
+            Validates.NotNull(_getWorkingDir);
             var suffix = _getWorkingDir();
             return string.IsNullOrWhiteSpace(suffix) ? null : $"{name}_{suffix}";
         }
@@ -104,7 +111,7 @@ namespace GitUIPluginInterfaces
                     return false;
                 }
 
-                return CredentialManager.SaveCredentials(GetTarget(target), new NetworkCredential(userName.Trim(), password));
+                return CredentialManager.SaveCredentials(GetTarget(target), new NetworkCredential(userName.Trim(), password)) != null;
             }
 
             private static bool RemoveCredentials(string target)

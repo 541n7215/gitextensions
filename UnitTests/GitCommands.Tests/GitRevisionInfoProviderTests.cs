@@ -63,7 +63,7 @@ namespace GitCommandsTests
             item.ObjectId.Returns(objectId);
             item.Guid.Returns(objectId.ToString());
 
-            var items = new[] { Substitute.For<IGitItem>(), Substitute.For<IGitItem>(), Substitute.For<IGitItem>() };
+            var items = new[] { Substitute.For<INamedGitItem>(), Substitute.For<INamedGitItem>(), Substitute.For<INamedGitItem>() };
             _module.GetTree(objectId, full: false).Returns(items);
 
             var children = _provider.LoadChildren(item);
@@ -76,9 +76,9 @@ namespace GitCommandsTests
         public void LoadChildren_should_return_shallow_tree_for_GitItem_with_updated_FileName()
         {
             var commitId = ObjectId.Random();
-            var item = new GitItem(0, GitObjectType.Tree, commitId, "folder");
+            GitItem item = new(0, GitObjectType.Tree, commitId, "folder");
 
-            var items = new[] { Substitute.For<IGitItem>(), new GitItem(0, GitObjectType.Blob, ObjectId.Random(), "file2"), new GitItem(0, GitObjectType.Blob, ObjectId.Random(), "file3") };
+            var items = new[] { Substitute.For<INamedGitItem>(), new GitItem(0, GitObjectType.Blob, ObjectId.Random(), "file2"), new GitItem(0, GitObjectType.Blob, ObjectId.Random(), "file3") };
             _module.GetTree(commitId, false).Returns(items);
 
             var children = _provider.LoadChildren(item);

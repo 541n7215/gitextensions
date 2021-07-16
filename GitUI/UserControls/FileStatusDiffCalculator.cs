@@ -4,6 +4,7 @@ using System.Linq;
 using GitCommands;
 using GitCommands.Git;
 using GitUIPluginInterfaces;
+using Microsoft;
 
 namespace GitUI
 {
@@ -16,8 +17,7 @@ namespace GitUI
             _getModule = getModule;
         }
 
-        public IReadOnlyList<FileStatusWithDescription> SetDiffs(in IReadOnlyList<GitRevision> revisions, Func<ObjectId, string> describeRevision,
-            Func<ObjectId, GitRevision> getRevision = null)
+        public IReadOnlyList<FileStatusWithDescription> SetDiffs(IReadOnlyList<GitRevision>? revisions, Func<ObjectId, string>? describeRevision, Func<ObjectId, GitRevision?>? getRevision = null)
         {
             var selectedRev = revisions?.FirstOrDefault();
             if (selectedRev is null)
@@ -27,11 +27,13 @@ namespace GitUI
 
             GitModule module = GetModule();
 
-            var fileStatusDescs = new List<FileStatusWithDescription>();
-            if (revisions.Count == 1)
+            List<FileStatusWithDescription> fileStatusDescs = new();
+            if (revisions!.Count == 1)
             {
                 if (selectedRev.ParentIds is null || selectedRev.ParentIds.Count == 0)
                 {
+                    Validates.NotNull(selectedRev.TreeGuid);
+
                     // No parent for the initial commit
                     fileStatusDescs.Add(new FileStatusWithDescription(
                         firstRev: null,
@@ -44,13 +46,13 @@ namespace GitUI
                     // Get the parents for the selected revision
                     var multipleParents = AppSettings.ShowDiffForAllParents ? selectedRev.ParentIds.Count : 1;
                     fileStatusDescs.AddRange(selectedRev
-                        .ParentIds?
+                        .ParentIds
                         .Take(multipleParents)
                         .Select(parentId =>
                             new FileStatusWithDescription(
                                 firstRev: new GitRevision(parentId),
                                 secondRev: selectedRev,
-                                summary: Strings.DiffWithParent + GetDescriptionForRevision(describeRevision, parentId),
+                                summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(describeRevision, parentId),
                                 statuses: module.GetDiffFilesWithSubmodulesStatus(parentId, selectedRev.ObjectId, selectedRev.FirstParentId))));
                 }
 
@@ -63,7 +65,7 @@ namespace GitUI
                     {
                         // Create an artificial commit
                         fileStatusDescs.Add(new FileStatusWithDescription(
-                            firstRev: new GitRevision(ObjectId.CombinedDiffId), secondRev: selectedRev, summary: Strings.CombinedDiff, statuses: conflicts));
+                            firstRev: new GitRevision(ObjectId.CombinedDiffId), secondRev: selectedRev, summary: TranslatedStrings.CombinedDiff, statuses: conflicts));
                     }
                 }
 
@@ -83,7 +85,7 @@ namespace GitUI
             fileStatusDescs.Add(new FileStatusWithDescription(
                 firstRev: firstRev,
                 secondRev: selectedRev,
-                summary: Strings.DiffWithParent + GetDescriptionForRevision(describeRevision, firstRev.ObjectId),
+                summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(describeRevision, firstRev.ObjectId),
                 statuses: module.GetDiffFilesWithSubmodulesStatus(firstRev.ObjectId, selectedRev.ObjectId, selectedRev.FirstParentId)));
 
             if (!AppSettings.ShowDiffForAllParents || revisions.Count > maxMultiCompare)
@@ -96,8 +98,18 @@ namespace GitUI
 
             // Get base commit, add as parent if unique
             Lazy<ObjectId> head = getRevision is not null
-                ? new Lazy<ObjectId>(() => getRevision(ObjectId.IndexId).FirstParentId)
-                : new Lazy<ObjectId>(() => module.RevParse("HEAD"));
+                ? new Lazy<ObjectId>(() =>
+                {
+                    GitRevision? revision = getRevision(ObjectId.IndexId);
+                    Validates.NotNull(revision);
+                    return revision.FirstParentId!;
+                })
+                : new Lazy<ObjectId>(() =>
+                {
+                    var objectId = module.RevParse("HEAD");
+                    Validates.NotNull(objectId);
+                    return objectId;
+                });
             var firstRevHead = GetRevisionOrHead(firstRev, head);
             var selectedRevHead = GetRevisionOrHead(selectedRev, head);
             var baseRevGuid = module.GetMergeBase(firstRevHead, selectedRevHead);
@@ -134,7 +146,7 @@ namespace GitUI
                         .Select(rev => new FileStatusWithDescription(
                             firstRev: rev,
                             secondRev: selectedRev,
-                            summary: Strings.DiffWithParent + GetDescriptionForRevision(describeRevision, rev.ObjectId),
+                            summary: TranslatedStrings.DiffWithParent + GetDescriptionForRevision(describeRevision, rev.ObjectId),
                             statuses: module.GetDiffFilesWithSubmodulesStatus(rev.ObjectId, selectedRev.ObjectId, selectedRev.FirstParentId))));
 
                 return fileStatusDescs;
@@ -147,35 +159,42 @@ namespace GitUI
             var allBaseToB = module.GetDiffFilesWithSubmodulesStatus(baseRevGuid, selectedRev.ObjectId, selectedRev.FirstParentId);
             var allBaseToA = module.GetDiffFilesWithSubmodulesStatus(baseRevGuid, firstRev.ObjectId, firstRev.FirstParentId);
 
-            var comparer = new GitItemStatusNameEqualityComparer();
+            GitItemStatusNameEqualityComparer comparer = new();
             var commonBaseToAandB = allBaseToB.Intersect(allBaseToA, comparer).Except(allAToB, comparer).ToList();
 
-            var revBase = new GitRevision(baseRevGuid);
+            GitRevision revBase = new(baseRevGuid);
             fileStatusDescs.Add(new FileStatusWithDescription(
                 firstRev: revBase,
                 secondRev: selectedRev,
-                summary: Strings.DiffBaseToB + GetDescriptionForRevision(describeRevision, selectedRev.ObjectId),
+                summary: TranslatedStrings.DiffBaseToB + GetDescriptionForRevision(describeRevision, selectedRev.ObjectId),
                 statuses: allBaseToB.Except(commonBaseToAandB, comparer).ToList()));
             fileStatusDescs.Add(new FileStatusWithDescription(
                 firstRev: revBase,
                 secondRev: firstRev,
-                summary: Strings.DiffBaseToB + GetDescriptionForRevision(describeRevision, firstRev.ObjectId),
+                summary: TranslatedStrings.DiffBaseToB + GetDescriptionForRevision(describeRevision, firstRev.ObjectId),
                 statuses: allBaseToA.Except(commonBaseToAandB, comparer).ToList()));
             fileStatusDescs.Add(new FileStatusWithDescription(
                 firstRev: revBase,
                 secondRev: selectedRev,
-                summary: Strings.DiffCommonBase + GetDescriptionForRevision(describeRevision, baseRevGuid),
+                summary: TranslatedStrings.DiffCommonBase + GetDescriptionForRevision(describeRevision, baseRevGuid),
                 statuses: commonBaseToAandB));
 
+            if (!GitVersion.Current.SupportRangeDiffTool)
+            {
+                return fileStatusDescs;
+            }
+
             // Add rangeDiff as a separate group (range is not the same as diff with artificial commits)
-            var statuses = new List<GitItemStatus> { new GitItemStatus { Name = Strings.DiffRange, IsRangeDiff = true } };
+            List<GitItemStatus> statuses = new() { new GitItemStatus(name: TranslatedStrings.DiffRange) { IsRangeDiff = true } };
             var first = firstRev.ObjectId == firstRevHead ? firstRev : new GitRevision(firstRevHead);
             var selected = selectedRev.ObjectId == selectedRevHead ? selectedRev : new GitRevision(selectedRevHead);
             var (baseToFirstCount, baseToSecondCount) = module.GetCommitRangeDiffCount(first.ObjectId, selected.ObjectId);
-            const int rangeDiffCommitLimit = 100;
-            var desc = $"{Strings.DiffRange} {baseToFirstCount ?? rangeDiffCommitLimit}↓ {baseToSecondCount ?? rangeDiffCommitLimit}↑";
 
-            var rangeDiff = new FileStatusWithDescription(
+            // first and selected has a common merge base and count must be available
+            // Only a printout, so no Validates
+            var desc = $"{TranslatedStrings.DiffRange} {baseToFirstCount ?? -1}↓ {baseToSecondCount ?? -1}↑";
+
+            FileStatusWithDescription rangeDiff = new(
                 firstRev: first,
                 secondRev: selected,
                 summary: desc,
@@ -184,36 +203,17 @@ namespace GitUI
                 baseB: baseB);
             fileStatusDescs.Add(rangeDiff);
 
-            // Git range-diff has cubic runtime complexity and can be slow and memory consuming, so just skip if diff is large
-            // to avoid that GE seem to hang when selecting the range diff
-            int count = (baseA is null || baseB is null
-                ? baseToFirstCount + baseToSecondCount
-                : module.GetCommitDiffCount(baseA, firstRevHead)
-                + module.GetCommitDiffCount(baseB, selectedRevHead))
-                ?? rangeDiffCommitLimit;
-            if (!GitVersion.Current.SupportRangeDiffTool || count >= rangeDiffCommitLimit)
-            {
-                var range = baseA is null || baseB is null
-                    ? $"{first.ObjectId}...{selected.ObjectId}"
-                    : $"{baseA}..{first.ObjectId} {baseB}..{selected.ObjectId}";
-                statuses[0].IsStatusOnly = true;
-
-                // Message is not translated, considered as an error message
-                statuses[0].ErrorMessage =
-                    $"# The symmetric difference from {first.ObjectId.ToShortString()} to {selected.ObjectId.ToShortString()} is {count} >= {rangeDiffCommitLimit}\n"
-                    + "# Git range-diff may take a long time and Git Extensions seem to hang during execution, why the command is not executed.\n"
-                    + "# You can still run the command in a Git terminal.\n"
-                    + "# Remove '--no-patch' to see changes to files too.\n"
-                    + $"git range-diff {range} --no-patch";
-            }
-
             return fileStatusDescs;
 
             static ObjectId GetRevisionOrHead(GitRevision rev, Lazy<ObjectId> head)
-                => rev.IsArtificial ? head.Value : rev.ObjectId;
+                => rev.ObjectId == ObjectId.IndexId
+                ? rev.FirstParentId!
+                : rev.IsArtificial
+                ? head.Value
+                : rev.ObjectId;
 
-            static string GetDescriptionForRevision(Func<ObjectId, string> describeRevision, ObjectId objectId)
-                => describeRevision is not null ? describeRevision(objectId) : objectId?.ToShortString();
+            static string GetDescriptionForRevision(Func<ObjectId, string>? describeRevision, ObjectId objectId)
+                => describeRevision is not null ? describeRevision(objectId) : objectId.ToShortString();
         }
 
         private GitModule GetModule()

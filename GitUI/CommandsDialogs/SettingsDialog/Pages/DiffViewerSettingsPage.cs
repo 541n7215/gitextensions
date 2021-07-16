@@ -1,5 +1,4 @@
 ﻿using GitCommands;
-using ResourceManager;
 
 namespace GitUI.CommandsDialogs.SettingsDialog.Pages
 {
@@ -11,9 +10,9 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages
             Text = "Diff Viewer";
             InitializeComplete();
 
-            chkShowDiffForAllParents.Text = Strings.ShowDiffForAllParentsText;
-            chkShowDiffForAllParents.ToolTipText = Strings.ShowDiffForAllParentsTooltip;
-            chkContScrollToNextFileOnlyWithAlt.Text = Strings.ContScrollToNextFileOnlyWithAlt;
+            chkShowDiffForAllParents.Text = TranslatedStrings.ShowDiffForAllParentsText;
+            chkShowDiffForAllParents.ToolTipText = TranslatedStrings.ShowDiffForAllParentsTooltip;
+            chkContScrollToNextFileOnlyWithAlt.Text = TranslatedStrings.ContScrollToNextFileOnlyWithAlt;
         }
 
         protected override void SettingsToPage()
@@ -27,6 +26,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages
             chkOpenSubmoduleDiffInSeparateWindow.Checked = AppSettings.OpenSubmoduleDiffInSeparateWindow;
             chkContScrollToNextFileOnlyWithAlt.Checked = AppSettings.AutomaticContinuousScroll;
             chkShowDiffForAllParents.Checked = AppSettings.ShowDiffForAllParents;
+            chkShowAllCustomDiffTools.Checked = AppSettings.ShowAvailableDiffTools;
             VerticalRulerPosition.Value = AppSettings.DiffVerticalRulerPosition;
         }
 
@@ -41,6 +41,7 @@ namespace GitUI.CommandsDialogs.SettingsDialog.Pages
             AppSettings.OpenSubmoduleDiffInSeparateWindow = chkOpenSubmoduleDiffInSeparateWindow.Checked;
             AppSettings.AutomaticContinuousScroll = chkContScrollToNextFileOnlyWithAlt.Checked;
             AppSettings.ShowDiffForAllParents = chkShowDiffForAllParents.Checked;
+            AppSettings.ShowAvailableDiffTools = chkShowAllCustomDiffTools.Checked;
             AppSettings.DiffVerticalRulerPosition = (int)VerticalRulerPosition.Value;
         }
 

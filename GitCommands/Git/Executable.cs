@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading.Tasks;
 using GitCommands.Logging;
+using GitExtUtils;
 using GitUI;
 using GitUIPluginInterfaces;
 
@@ -28,7 +28,6 @@ namespace GitCommands
         }
 
         /// <inheritdoc />
-        [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public IProcess Start(ArgumentString arguments = default,
                               bool createWindow = false,
                               bool redirectInput = false,
@@ -46,11 +45,6 @@ namespace GitCommands
             return new ProcessWrapper(fileName, args, _workingDir, createWindow, redirectInput, redirectOutput, outputEncoding, useShellExecute);
         }
 
-        public string GetOutput(ArgumentString arguments)
-        {
-            return this.GetOutput(arguments, null);
-        }
-
         #region ProcessWrapper
 
         /// <summary>
@@ -61,9 +55,9 @@ namespace GitCommands
         private sealed class ProcessWrapper : IProcess
         {
             // TODO should this use TaskCreationOptions.RunContinuationsAsynchronously
-            private readonly TaskCompletionSource<int> _exitTaskCompletionSource = new TaskCompletionSource<int>();
+            private readonly TaskCompletionSource<int> _exitTaskCompletionSource = new();
 
-            private readonly object _syncRoot = new object();
+            private readonly object _syncRoot = new();
             private readonly Process _process;
             private readonly ProcessOperation _logOperation;
             private readonly bool _redirectInput;
@@ -111,14 +105,22 @@ namespace GitCommands
                 try
                 {
                     _process.Start();
-                    _logOperation.SetProcessId(_process.Id);
+                    try
+                    {
+                        _logOperation.SetProcessId(_process.Id);
+                    }
+                    catch (InvalidOperationException ex) when (useShellExecute)
+                    {
+                        // _process.Start() has succeeded, ignore the failure getting the _process.Id
+                        _logOperation.LogProcessEnd(ex);
+                    }
                 }
                 catch (Exception ex)
                 {
                     Dispose();
 
                     _logOperation.LogProcessEnd(ex);
-                    throw new ExternalOperationException(fileName, arguments, workDir, ex);
+                    throw new ExternalOperationException(fileName, arguments, workDir, innerException: ex);
                 }
             }
 

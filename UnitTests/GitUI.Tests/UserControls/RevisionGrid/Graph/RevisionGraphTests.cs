@@ -1,6 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using GitCommands;
 using GitUI.UserControls.RevisionGrid;
 using GitUI.UserControls.RevisionGrid.Graph;
 using GitUIPluginInterfaces;
@@ -35,12 +33,14 @@ namespace GitUITests.UserControls.RevisionGrid
             Assert.AreEqual(5, _revisionGraph.GetCachedCount());
             _revisionGraph.CacheTo(400, 400);
             Assert.AreEqual(6, _revisionGraph.GetCachedCount());
+            _revisionGraph.LoadingCompleted();
+            Assert.AreEqual(6 + LookAhead, _revisionGraph.GetCachedCount());
         }
 
         [Test]
         public void ShouldBeAbleToClear()
         {
-            Assert.AreEqual(6, _revisionGraph.Count);
+            Assert.AreEqual(6 + LookAhead, _revisionGraph.Count);
             _revisionGraph.Clear();
             Assert.AreEqual(0, _revisionGraph.Count);
         }
@@ -71,21 +71,14 @@ namespace GitUITests.UserControls.RevisionGrid
         }
 
         [Test]
-        public void LaneColorTest()
-        {
-            _revisionGraph.CacheTo(_revisionGraph.Count, _revisionGraph.Count);
-            Assert.AreNotEqual(_revisionGraph.GetSegmentsForRow(2).GetSegmentsForIndex(0).First().Parent.LaneColor, _revisionGraph.GetSegmentsForRow(2).GetSegmentsForIndex(1).Last().Parent.LaneColor);
-        }
-
-        [Test]
         public void ShouldReorderInTopoOrder()
         {
             _revisionGraph.CacheTo(_revisionGraph.Count, _revisionGraph.Count);
             Assert.IsTrue(_revisionGraph.GetTestAccessor().ValidateTopoOrder());
 
-            GitRevision commit1 = new GitRevision(ObjectId.Random());
+            GitRevision commit1 = new(ObjectId.Random());
 
-            GitRevision commit2 = new GitRevision(ObjectId.Random());
+            GitRevision commit2 = new(ObjectId.Random());
             commit1.ParentIds = new ObjectId[] { commit2.ObjectId };
             commit2.ParentIds = new ObjectId[] { _revisionGraph.GetNodeForRow(4).Objectid };
 
@@ -100,7 +93,7 @@ namespace GitUITests.UserControls.RevisionGrid
             Assert.IsTrue(_revisionGraph.GetTestAccessor().ValidateTopoOrder());
 
             // Add a new head
-            GitRevision newHead = new GitRevision(ObjectId.Random());
+            GitRevision newHead = new(ObjectId.Random());
             newHead.ParentIds = new ObjectId[] { _revisionGraph.GetNodeForRow(0).Objectid };
             _revisionGraph.Add(newHead, RevisionNodeFlags.None); // Add commit that has the current top node as parent.
 
@@ -129,11 +122,11 @@ namespace GitUITests.UserControls.RevisionGrid
              *     Commit3
              */
 
-            GitRevision commit1 = new GitRevision(ObjectId.Random());
+            GitRevision commit1 = new(ObjectId.Random());
 
-            GitRevision commit2 = new GitRevision(ObjectId.Random());
+            GitRevision commit2 = new(ObjectId.Random());
 
-            GitRevision commit3 = new GitRevision(ObjectId.Random());
+            GitRevision commit3 = new(ObjectId.Random());
             commit1.ParentIds = new ObjectId[] { commit3.ObjectId };
 
             _revisionGraph.Add(commit1, RevisionNodeFlags.None);
@@ -144,6 +137,8 @@ namespace GitUITests.UserControls.RevisionGrid
 
             Assert.AreEqual(1, _revisionGraph.GetSegmentsForRow(1).GetCurrentRevisionLane());
         }
+
+        private static int LookAhead => 20;
 
         private static IEnumerable<GitRevision> Revisions
         {
@@ -161,30 +156,40 @@ namespace GitUITests.UserControls.RevisionGrid
                  *     Commit5
                  *        |
                  *     Commit6
+                 *        |
+                 *       ...
+                 *        |
+                 *     Commit(6 + LookAhead)
                  */
-                GitRevision commit1 = new GitRevision(ObjectId.Random());
+                GitRevision commit1 = new(ObjectId.Random());
 
-                GitRevision commit2 = new GitRevision(ObjectId.Random());
+                GitRevision commit2 = new(ObjectId.Random());
                 commit1.ParentIds = new ObjectId[] { commit2.ObjectId };
 
-                GitRevision commit3 = new GitRevision(ObjectId.Random());
-                GitRevision commit4 = new GitRevision(ObjectId.Random());
+                GitRevision commit3 = new(ObjectId.Random());
+                GitRevision commit4 = new(ObjectId.Random());
                 commit2.ParentIds = new ObjectId[] { commit3.ObjectId, commit4.ObjectId };
 
-                GitRevision commit5 = new GitRevision(ObjectId.Random());
+                GitRevision commit5 = new(ObjectId.Random());
                 commit3.ParentIds = new ObjectId[] { commit5.ObjectId };
                 commit4.ParentIds = new ObjectId[] { commit5.ObjectId };
-
-                GitRevision commit6 = new GitRevision(ObjectId.Random());
-                commit5.ParentIds = new ObjectId[] { commit6.ObjectId };
-                commit6.ParentIds = new ObjectId[] { };
 
                 yield return commit1;
                 yield return commit2;
                 yield return commit3;
                 yield return commit4;
-                yield return commit5;
-                yield return commit6;
+
+                GitRevision prevCommit = commit5;
+                for (int i = 0; i < 1 + LookAhead; ++i)
+                {
+                    GitRevision currCommit = new(ObjectId.Random());
+                    prevCommit.ParentIds = new ObjectId[] { currCommit.ObjectId };
+                    yield return prevCommit;
+                    prevCommit = currCommit;
+                }
+
+                prevCommit.ParentIds = new ObjectId[] { };
+                yield return prevCommit;
             }
         }
     }

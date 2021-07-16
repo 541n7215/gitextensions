@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using GitCommands;
 using GitUI.CommandsDialogs.BrowseDialog;
+using Microsoft;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
@@ -23,20 +24,20 @@ namespace GitUI.CommandsDialogs
         private readonly ToolStrip _mainMenuStrip;
 
         /// <summary>
-        /// The context menu that be shown to allow toggle visibilty of toolbars in <see cref="FormBrowse"/>.
+        /// The context menu that be shown to allow toggle visibility of toolbars in <see cref="FormBrowse"/>.
         /// </summary>
-        private readonly ContextMenuStrip _toolStripContextMenu = new ContextMenuStrip();
+        private readonly ContextMenuStrip _toolStripContextMenu = new();
 
-        private List<MenuCommand> _navigateMenuCommands;
-        private List<MenuCommand> _viewMenuCommands;
+        private List<MenuCommand>? _navigateMenuCommands;
+        private List<MenuCommand>? _viewMenuCommands;
 
-        private ToolStripMenuItem _navigateToolStripMenuItem;
-        private ToolStripMenuItem _viewToolStripMenuItem;
-        private ToolStripMenuItem _toolbarsMenuItem;
+        private ToolStripMenuItem? _navigateToolStripMenuItem;
+        private ToolStripMenuItem? _viewToolStripMenuItem;
+        private ToolStripMenuItem? _toolbarsMenuItem;
 
         // we have to remember which items we registered with the menucommands because other
         // location (RevisionGrid) can register items too!
-        private readonly List<ToolStripMenuItem> _itemsRegisteredWithMenuCommand = new List<ToolStripMenuItem>();
+        private readonly List<ToolStripMenuItem> _itemsRegisteredWithMenuCommand = new();
 
         public FormBrowseMenus(ToolStrip menuStrip)
         {
@@ -58,9 +59,9 @@ namespace GitUI.CommandsDialogs
         {
             if (disposing)
             {
-                _navigateToolStripMenuItem.Dispose();
-                _viewToolStripMenuItem.Dispose();
-                _toolbarsMenuItem.Dispose();
+                _navigateToolStripMenuItem?.Dispose();
+                _viewToolStripMenuItem?.Dispose();
+                _toolbarsMenuItem?.Dispose();
             }
         }
 
@@ -87,7 +88,7 @@ namespace GitUI.CommandsDialogs
         /// <param name="toolStrips">The list of toobars to toggle visibility for.</param>
         public void CreateToolbarsMenus(params ToolStripEx[] toolStrips)
         {
-            Debug.Assert(_toolbarsMenuItem is not null, "Toolbars menu item must be already created.");
+            Validates.NotNull(_toolbarsMenuItem);
 
             foreach (ToolStrip toolStrip in toolStrips)
             {
@@ -99,18 +100,155 @@ namespace GitUI.CommandsDialogs
 
             static ToolStripItem CreateItem(ToolStrip senderToolStrip)
             {
-                var toolStripItem = new ToolStripMenuItem(senderToolStrip.Text)
+                ToolStripMenuItem toolStripItem = new(senderToolStrip.Text)
                 {
                     Checked = senderToolStrip.Visible,
                     CheckOnClick = true,
                     Tag = senderToolStrip
                 };
+
+                toolStripItem.DropDown.Closing += (sender, e) =>
+                {
+                    if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked)
+                    {
+                        // Cancel closing menu to allow selecting/unselecting multiple items.
+                        e.Cancel = true;
+                    }
+                };
+
+                CreateToolStripSubMenus(senderToolStrip, toolStripItem);
+
                 toolStripItem.Click += (s, e) =>
                 {
                     senderToolStrip.Visible = !senderToolStrip.Visible;
                 };
 
                 return toolStripItem;
+            }
+        }
+
+        private static void CreateToolStripSubMenus(ToolStrip senderToolStrip, ToolStripMenuItem toolStripItem)
+        {
+            const string toolbarSettingsPrefix = "formbrowse_toolbar_visibility_";
+            string? currentGroup = null;
+            foreach (ToolStripItem toolbarItem in senderToolStrip.Items)
+            {
+                if (toolbarItem is ToolStripSeparator)
+                {
+                    toolStripItem.DropDownItems.Add(new ToolStripSeparator());
+                    continue;
+                }
+
+                bool belongToAGroup = BelongToAGroup(toolbarItem, out string groupName);
+                string key;
+                if (belongToAGroup)
+                {
+                    if (currentGroup == groupName)
+                    {
+                        toolbarItem.Visible = LoadVisibilitySetting(groupName);
+                        continue;
+                    }
+
+                    currentGroup = (string)toolbarItem.Tag;
+                    key = groupName;
+                }
+                else
+                {
+                    key = toolbarItem.Name;
+                }
+
+                bool visible = LoadVisibilitySetting(key);
+                toolbarItem.Visible = visible;
+
+                ToolStripMenuItem menuToolbarItem = new(toolbarItem.ToolTipText)
+                {
+                    Checked = visible,
+                    CheckOnClick = true,
+                    Tag = toolbarItem,
+                    Image = toolbarItem.Image
+                };
+
+                menuToolbarItem.Click += (s, e) =>
+                {
+                    toolbarItem.Visible = !toolbarItem.Visible;
+
+                    if (!BelongToAGroup(toolbarItem, out var group))
+                    {
+                        SaveVisibilitySetting(toolbarItem.Name, toolbarItem.Visible);
+                    }
+                    else
+                    {
+                        SaveVisibilitySetting(group, toolbarItem.Visible);
+                        foreach (ToolStripItem item in senderToolStrip.Items)
+                        {
+                            if (item.Tag == (object)group)
+                            {
+                                item.Visible = toolbarItem.Visible;
+                            }
+                        }
+                    }
+
+                    AdaptSeparatorsVisibility(senderToolStrip);
+                };
+
+                toolStripItem.DropDownItems.Add(menuToolbarItem);
+            }
+
+            AdaptSeparatorsVisibility(senderToolStrip);
+
+            return;
+
+            static void SaveVisibilitySetting(string key, bool visible) => AppSettings.SetBool(toolbarSettingsPrefix + key, visible ? null : false);
+            static bool LoadVisibilitySetting(string key) => AppSettings.GetBool(toolbarSettingsPrefix + key, true);
+
+            static bool BelongToAGroup(ToolStripItem toolbarItem, out string groupName)
+            {
+                const string groupPrefix = "ToolBar_group:";
+                if (toolbarItem.Tag is string group && group.StartsWith(groupPrefix))
+                {
+                    groupName = group;
+                    return true;
+                }
+
+                groupName = string.Empty;
+                return false;
+            }
+        }
+
+        private static void AdaptSeparatorsVisibility(ToolStrip senderToolStrip)
+        {
+            // First pass: toolbar items from left to right
+            bool shouldHideNextSeparator = true;
+            foreach (ToolStripItem item in senderToolStrip.Items)
+            {
+                HandleCurrentItem(item);
+            }
+
+            // Second pass: toolbar items from right to left
+            shouldHideNextSeparator = true;
+            for (int i = senderToolStrip.Items.Count - 1; i >= 0; i--)
+            {
+                var item = senderToolStrip.Items[i];
+
+                if (item is ToolStripSeparator { Visible: false })
+                {
+                    continue;
+                }
+
+                HandleCurrentItem(item);
+            }
+
+            void HandleCurrentItem(ToolStripItem toolStripItem)
+            {
+                if (toolStripItem is ToolStripSeparator separator)
+                {
+                    separator.Visible = !shouldHideNextSeparator;
+                    shouldHideNextSeparator = true;
+                }
+                else
+                {
+                    shouldHideNextSeparator &= !toolStripItem.Visible;
+                }
             }
         }
 
@@ -133,7 +271,7 @@ namespace GitUI.CommandsDialogs
             // In the current implementation command menus are defined in the RevisionGrid control,
             // and added to the main menu of the FormBrowse for the ease of use
 
-            IList<MenuCommand> selectedMenuCommands = null; // make that more clear
+            IList<MenuCommand>? selectedMenuCommands = null; // make that more clear
 
             switch (mainMenuItem)
             {
@@ -164,6 +302,8 @@ namespace GitUI.CommandsDialogs
                     break;
             }
 
+            Validates.NotNull(selectedMenuCommands);
+
             selectedMenuCommands.AddAll(menuCommands);
         }
 
@@ -173,6 +313,12 @@ namespace GitUI.CommandsDialogs
         public void InsertRevisionGridMainMenuItems(ToolStripItem insertAfterMenuItem)
         {
             RemoveRevisionGridMainMenuItems();
+
+            Validates.NotNull(_navigateToolStripMenuItem);
+            Validates.NotNull(_navigateMenuCommands);
+            Validates.NotNull(_viewToolStripMenuItem);
+            Validates.NotNull(_viewMenuCommands);
+            Validates.NotNull(_toolbarsMenuItem);
 
             SetDropDownItems(_navigateToolStripMenuItem, _navigateMenuCommands);
             SetDropDownItems(_viewToolStripMenuItem, _viewMenuCommands);
@@ -201,23 +347,17 @@ namespace GitUI.CommandsDialogs
         /// </remarks>
         private void CreateMenuItems()
         {
-            if (_navigateToolStripMenuItem is null)
+            _navigateToolStripMenuItem ??= new ToolStripMenuItem
             {
-                _navigateToolStripMenuItem = new ToolStripMenuItem
-                {
-                    Name = "navigateToolStripMenuItem",
-                    Text = "Navigate"
-                };
-            }
+                Name = "navigateToolStripMenuItem",
+                Text = "Navigate"
+            };
 
-            if (_viewToolStripMenuItem is null)
+            _viewToolStripMenuItem ??= new ToolStripMenuItem
             {
-                _viewToolStripMenuItem = new ToolStripMenuItem
-                {
-                    Name = "viewToolStripMenuItem",
-                    Text = "View"
-                };
-            }
+                Name = "viewToolStripMenuItem",
+                Text = "View"
+            };
 
             if (_toolbarsMenuItem is null)
             {
@@ -232,8 +372,10 @@ namespace GitUI.CommandsDialogs
 
         private IEnumerable<(string name, object item)> GetAdditionalMainMenuItemsForTranslation()
         {
-            foreach (ToolStripMenuItem menuItem in new[] { _navigateToolStripMenuItem, _viewToolStripMenuItem, _toolbarsMenuItem })
+            foreach (ToolStripMenuItem? menuItem in new[] { _navigateToolStripMenuItem, _viewToolStripMenuItem, _toolbarsMenuItem })
             {
+                Validates.NotNull(menuItem);
+
                 yield return (menuItem.Name, menuItem);
             }
         }
@@ -242,7 +384,7 @@ namespace GitUI.CommandsDialogs
         {
             toolStripMenuItemTarget.DropDownItems.Clear();
 
-            var toolStripItems = new List<ToolStripItem>();
+            List<ToolStripItem> toolStripItems = new();
             foreach (var menuCommand in menuCommands)
             {
                 var toolStripItem = MenuCommand.CreateToolStripItem(menuCommand);

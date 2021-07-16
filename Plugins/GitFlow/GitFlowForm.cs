@@ -1,33 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using GitCommands;
+using GitExtensions.Plugins.GitFlow.Properties;
 using GitExtUtils;
 using GitExtUtils.GitUI;
-using GitFlow.Properties;
 using GitUIPluginInterfaces;
 using ResourceManager;
 
-namespace GitFlow
+namespace GitExtensions.Plugins.GitFlow
 {
     public partial class GitFlowForm : GitExtensionsFormBase
     {
-        private readonly TranslationString _gitFlowTooltip = new TranslationString("A good branch model for your project with Git...");
-        private readonly TranslationString _loading = new TranslationString("Loading...");
-        private readonly TranslationString _noBranchExist = new TranslationString("No {0} branches exist.");
+        private readonly TranslationString _gitFlowTooltip = new("A good branch model for your project with Git...");
+        private readonly TranslationString _loading = new("Loading...");
+        private readonly TranslationString _noBranchExist = new("No {0} branches exist.");
 
         private readonly GitUIEventArgs _gitUiCommands;
 
         private Dictionary<string, IReadOnlyList<string>> Branches { get; } = new Dictionary<string, IReadOnlyList<string>>();
 
-        private readonly AsyncLoader _task = new AsyncLoader();
+        private readonly AsyncLoader _task = new();
 
         public bool IsRefreshNeeded { get; set; }
 
-        private string CurrentBranch { get; set; }
+        private string? CurrentBranch { get; set; }
 
         private enum Branch
         {
@@ -47,7 +48,7 @@ namespace GitFlow
         {
             get
             {
-                var args = new GitArgumentBuilder("config")
+                GitArgumentBuilder args = new("config")
                 {
                     "--get",
                     "gitflow.branch.master"
@@ -66,10 +67,7 @@ namespace GitFlow
             lblPrefixManage.Text = string.Empty;
             ttGitFlow.SetToolTip(lnkGitFlow, _gitFlowTooltip.Text);
 
-            if (_gitUiCommands is not null)
-            {
-                Init();
-            }
+            Init();
         }
 
         private void Init()
@@ -89,7 +87,7 @@ namespace GitFlow
                 btnPull.Enabled = btnPublish.Enabled = remotes.Any();
 
                 cbType.DataSource = BranchTypes;
-                var types = new List<string> { string.Empty };
+                List<string> types = new() { string.Empty };
                 types.AddRange(BranchTypes);
                 cbManageType.DataSource = types;
 
@@ -105,7 +103,7 @@ namespace GitFlow
             }
         }
 
-        private static bool TryExtractBranchFromHead(string currentRef, out string branchType, out string branchName)
+        private static bool TryExtractBranchFromHead(string currentRef, [NotNullWhen(returnValue: true)] out string? branchType, [NotNullWhen(returnValue: true)] out string? branchName)
         {
             foreach (Branch branch in Enum.GetValues(typeof(Branch)))
             {
@@ -148,7 +146,7 @@ namespace GitFlow
 
         private IReadOnlyList<string> GetBranches(string typeBranch)
         {
-            var args = new GitArgumentBuilder("flow") { typeBranch };
+            GitArgumentBuilder args = new("flow") { typeBranch };
             var result = _gitUiCommands.GitModule.GitExecutable.Execute(args);
 
             if (result.ExitCode != 0 || result.StandardOutput is null)
@@ -198,7 +196,7 @@ namespace GitFlow
 
             List<string> GetLocalBranches()
             {
-                var args = new GitArgumentBuilder("branch");
+                GitArgumentBuilder args = new("branch");
                 return _gitUiCommands.GitModule
                     .GitExecutable.GetOutput(args)
                     .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(e => e.Trim('*', ' ', '\n', '\r'))
@@ -211,7 +209,7 @@ namespace GitFlow
         #region Run GitFlow commands
         private void btnInit_Click(object sender, EventArgs e)
         {
-            var args = new GitArgumentBuilder("flow")
+            GitArgumentBuilder args = new("flow")
             {
                 "init",
                 "-d"
@@ -225,7 +223,7 @@ namespace GitFlow
         private void btnStartBranch_Click(object sender, EventArgs e)
         {
             var branchType = cbType.SelectedValue.ToString();
-            var args = new GitArgumentBuilder("flow")
+            GitArgumentBuilder args = new("flow")
             {
                 branchType,
                 "start",
@@ -270,7 +268,7 @@ namespace GitFlow
 
         private void btnPublish_Click(object sender, EventArgs e)
         {
-            var args = new GitArgumentBuilder("flow")
+            GitArgumentBuilder args = new("flow")
             {
                 cbManageType.SelectedValue.ToString(),
                 "publish",
@@ -281,7 +279,7 @@ namespace GitFlow
 
         private void btnPull_Click(object sender, EventArgs e)
         {
-            var args = new GitArgumentBuilder("flow")
+            GitArgumentBuilder args = new("flow")
             {
                 cbManageType.SelectedValue.ToString(),
                 "pull",
@@ -293,7 +291,7 @@ namespace GitFlow
 
         private void btnFinish_Click(object sender, EventArgs e)
         {
-            var args = new GitArgumentBuilder("flow")
+            GitArgumentBuilder args = new("flow")
             {
                 cbManageType.SelectedValue.ToString(),
                 "finish",
@@ -396,7 +394,7 @@ namespace GitFlow
 
         private void DisplayHead()
         {
-            var args = new GitArgumentBuilder("symbolic-ref") { "HEAD" };
+            GitArgumentBuilder args = new("symbolic-ref") { "HEAD" };
             var head = _gitUiCommands.GitModule.GitExecutable.GetOutput(args).Trim('*', ' ', '\n', '\r');
             lblHead.Text = head;
 

@@ -1,13 +1,11 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using ConEmu.WinForms;
 
 namespace GitUI.Shells
 {
     public static class ConEmuControlExtensions
     {
-        public static void ChangeFolder(this ConEmuControl terminal, IShellDescriptor shell, string path)
+        public static void ChangeFolder(this ConEmuControl? terminal, IShellDescriptor? shell, string? path)
         {
             if (terminal?.RunningSession is null || shell is null || string.IsNullOrWhiteSpace(path))
             {

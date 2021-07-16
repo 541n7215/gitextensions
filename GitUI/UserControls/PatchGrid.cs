@@ -7,18 +7,19 @@ using System.Windows.Forms;
 using GitCommands.Patches;
 using GitExtUtils.GitUI;
 using GitExtUtils.GitUI.Theming;
+using Microsoft;
 using ResourceManager;
 
 namespace GitUI
 {
     public partial class PatchGrid : GitModuleControl
     {
-        private readonly TranslationString _unableToShowPatchDetails = new TranslationString("Unable to show details of patch file.");
+        private readonly TranslationString _unableToShowPatchDetails = new("Unable to show details of patch file.");
 
-        private List<PatchFile> _skipped;
+        private List<PatchFile>? _skipped;
         private bool _isManagingRebase;
 
-        public IReadOnlyList<PatchFile> PatchFiles { get; private set; }
+        public IReadOnlyList<PatchFile>? PatchFiles { get; private set; }
 
         public PatchGrid()
         {
@@ -64,6 +65,8 @@ namespace GitUI
 
         public void RefreshGrid()
         {
+            Validates.NotNull(PatchFiles);
+
             var updatedPatches = GetPatches();
 
             for (int i = 0; i < updatedPatches.Count; i++)
@@ -131,7 +134,7 @@ namespace GitUI
 
             var patchFile = (PatchFile)Patches.SelectedRows[0].DataBoundItem;
 
-            if (patchFile.ObjectId is not null)
+            if (patchFile.ObjectId is not null && !patchFile.ObjectId.IsArtificial)
             {
                 UICommands.StartFormCommitDiff(patchFile.ObjectId);
                 return;
@@ -139,7 +142,7 @@ namespace GitUI
 
             if (string.IsNullOrEmpty(patchFile.FullName))
             {
-                MessageBox.Show(_unableToShowPatchDetails.Text, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(_unableToShowPatchDetails.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 

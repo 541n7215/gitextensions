@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using GitExtensions;
 using GitUIPluginInterfaces;
 
 namespace GitCommands.Config
@@ -63,7 +62,7 @@ namespace GitCommands.Config
 
         public string SectionName { get; set; }
         public string? SubSection { get; set; }
-        public bool SubSectionCaseSensitive { get; set; }
+        public bool SubSectionCaseSensitive { get; }
 
         public IDictionary<string, IReadOnlyList<string>> AsDictionary()
         {
@@ -75,7 +74,7 @@ namespace GitCommands.Config
             return _configKeys.ContainsKey(key);
         }
 
-        public void SetValue(string key, string value)
+        public void SetValue(string key, string? value)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -118,7 +117,7 @@ namespace GitCommands.Config
         public override string ToString()
         {
             string result = "[" + SectionName;
-            if (!Strings.IsNullOrEmpty(SubSection))
+            if (!string.IsNullOrEmpty(SubSection))
             {
                 var escSubSection = SubSection.Replace("\"", "\\\"");
                 escSubSection = escSubSection.Replace("\\", "\\\\");

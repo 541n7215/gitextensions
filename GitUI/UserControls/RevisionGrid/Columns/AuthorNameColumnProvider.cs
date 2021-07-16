@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Windows.Forms;
 using GitCommands;
 using GitExtUtils.GitUI;
 using GitUIPluginInterfaces;
@@ -45,7 +46,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             e.FormattingApplied = true;
         }
 
-        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, out string toolTip)
+        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
         {
             if (revision.ObjectId.IsArtificial)
             {
@@ -63,13 +64,13 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             string toolTip;
             if (revision.Author == revision.Committer && revision.AuthorEmail == revision.CommitterEmail)
             {
-                toolTip = $"{revision.Author} <{revision.AuthorEmail}> {Strings.AuthoredAndCommitted}";
+                toolTip = $"{revision.Author} <{revision.AuthorEmail}> {TranslatedStrings.AuthoredAndCommitted}";
             }
             else
             {
                 toolTip =
-                    $"{revision.Author} <{revision.AuthorEmail}> {Strings.Authored}\n" +
-                    $"{revision.Committer} <{revision.CommitterEmail}> {Strings.Committed}";
+                    $"{revision.Author} <{revision.AuthorEmail}> {TranslatedStrings.Authored}\n" +
+                    $"{revision.Committer} <{revision.CommitterEmail}> {TranslatedStrings.Committed}";
             }
 
             return toolTip;

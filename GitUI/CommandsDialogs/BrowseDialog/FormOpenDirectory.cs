@@ -7,18 +7,17 @@ using System.Windows.Forms;
 using GitCommands;
 using GitCommands.UserRepositoryHistory;
 using GitExtUtils.GitUI;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs.BrowseDialog
 {
     public partial class FormOpenDirectory : GitExtensionsForm
     {
-        private readonly TranslationString _warningOpenFailed = new TranslationString("The selected directory is not a valid git repository.");
+        private readonly TranslationString _warningOpenFailed = new("The selected directory is not a valid git repository.");
 
-        [CanBeNull] private GitModule _chosenModule;
+        private GitModule? _chosenModule;
 
-        public FormOpenDirectory([CanBeNull] GitModule currentModule)
+        public FormOpenDirectory(GitModule? currentModule)
         {
             InitializeComponent();
             InitializeComplete();
@@ -44,9 +43,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
             MinimumSize = DpiUtil.Scale(new Size(450, 116));
         }
 
-        private static IReadOnlyList<string> GetDirectories([CanBeNull] GitModule currentModule, IEnumerable<Repository> repositoryHistory)
+        private static IReadOnlyList<string> GetDirectories(GitModule? currentModule, IEnumerable<Repository> repositoryHistory)
         {
-            var directories = new List<string>();
+            List<string> directories = new();
 
             if (!string.IsNullOrWhiteSpace(AppSettings.DefaultCloneDestinationPath))
             {
@@ -55,7 +54,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
 
             if (!string.IsNullOrWhiteSpace(currentModule?.WorkingDir))
             {
-                var di = new DirectoryInfo(currentModule.WorkingDir);
+                DirectoryInfo di = new(currentModule.WorkingDir);
                 if (di.Parent is not null)
                 {
                     directories.Add(di.Parent.FullName.EnsureTrailingPathSeparator());
@@ -81,10 +80,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
             return directories.Distinct().ToList();
         }
 
-        [CanBeNull]
-        public static GitModule OpenModule(IWin32Window owner, [CanBeNull] GitModule currentModule)
+        public static GitModule? OpenModule(IWin32Window owner, GitModule? currentModule)
         {
-            using var open = new FormOpenDirectory(currentModule);
+            using FormOpenDirectory open = new(currentModule);
             open.ShowDialog(owner);
             return open._chosenModule;
         }
@@ -100,20 +98,20 @@ namespace GitUI.CommandsDialogs.BrowseDialog
                 return;
             }
 
-            MessageBox.Show(this, _warningOpenFailed.Text, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, _warningOpenFailed.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void DirectoryKeyPress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == (char)Keys.Enter)
             {
-                LoadClick(null, null);
+                LoadClick(this, EventArgs.Empty);
             }
         }
 
         private void folderBrowserButton_Click(object sender, EventArgs e)
         {
-            string userSelectedPath = OsShellUtil.PickFolder(this, _NO_TRANSLATE_Directory.Text);
+            string? userSelectedPath = OsShellUtil.PickFolder(this, _NO_TRANSLATE_Directory.Text);
             if (!string.IsNullOrEmpty(userSelectedPath))
             {
                 _NO_TRANSLATE_Directory.Text = userSelectedPath;
@@ -125,7 +123,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         {
             try
             {
-                var currentDirectory = new DirectoryInfo(_NO_TRANSLATE_Directory.Text);
+                DirectoryInfo currentDirectory = new(_NO_TRANSLATE_Directory.Text);
                 if (currentDirectory.Parent is null)
                 {
                     return;
@@ -147,7 +145,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         {
             try
             {
-                var currentDirectory = new DirectoryInfo(_NO_TRANSLATE_Directory.Text);
+                DirectoryInfo currentDirectory = new(_NO_TRANSLATE_Directory.Text);
                 folderGoUpButton.Enabled = currentDirectory.Exists && currentDirectory.Parent is not null;
             }
             catch
@@ -156,14 +154,14 @@ namespace GitUI.CommandsDialogs.BrowseDialog
             }
         }
 
-        private static GitModule OpenGitRepository([NotNull] string path, ILocalRepositoryManager localRepositoryManager)
+        private static GitModule? OpenGitRepository(string path, ILocalRepositoryManager localRepositoryManager)
         {
             if (!Directory.Exists(path))
             {
                 return null;
             }
 
-            var chosenModule = new GitModule(path.EnsureTrailingPathSeparator());
+            GitModule chosenModule = new(path.EnsureTrailingPathSeparator());
             if (!chosenModule.IsValidGitWorkingDir())
             {
                 return null;
@@ -174,7 +172,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         }
 
         internal TestAccessor GetTestAccessor()
-            => new TestAccessor(this);
+            => new(this);
 
         internal readonly struct TestAccessor
         {
@@ -185,7 +183,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
                 _form = form;
             }
 
-            public static GitModule OpenGitRepository([NotNull] string path, ILocalRepositoryManager localRepositoryManager)
+            public static GitModule? OpenGitRepository(string path, ILocalRepositoryManager localRepositoryManager)
                 => FormOpenDirectory.OpenGitRepository(path, localRepositoryManager);
         }
     }

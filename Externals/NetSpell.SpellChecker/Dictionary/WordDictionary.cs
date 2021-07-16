@@ -224,7 +224,7 @@ namespace NetSpell.SpellChecker.Dictionary
             // Step 3 Remove suffix, Search BaseWords
 
             // save suffixed words for use when removing prefix
-            var suffixWords = new List<string>();
+            List<string> suffixWords = new();
 
             // Add word to suffix word list
             suffixWords.Add(word);
@@ -306,8 +306,8 @@ namespace NetSpell.SpellChecker.Dictionary
         /// </returns>
         public List<string> ExpandWord(Word word)
         {
-            var suffixWords = new List<string>();
-            var words = new List<string>();
+            List<string> suffixWords = new();
+            List<string> words = new();
 
             suffixWords.Add(word.Text);
             string prefixKeys = "";
@@ -374,7 +374,7 @@ namespace NetSpell.SpellChecker.Dictionary
             TryCharacters = "";
 
             // the following is used to split a line by white space
-            var spaceRegex = new Regex(@"[^\s]+", RegexOptions.Compiled);
+            Regex spaceRegex = new(@"[^\s]+", RegexOptions.Compiled);
 
             string currentSection = "";
             AffixRule currentRule = null;
@@ -460,7 +460,7 @@ namespace NetSpell.SpellChecker.Dictionary
                                     // part 1 = affix key
                                     if (currentRule.Name == partMatches[0].Value)
                                     {
-                                        var entry = new AffixEntry();
+                                        AffixEntry entry = new();
 
                                         // part 2 = strip char
                                         if (partMatches[1].Value != "0")
@@ -484,7 +484,7 @@ namespace NetSpell.SpellChecker.Dictionary
                                 partMatches = spaceRegex.Matches(tempLine);
                                 if (partMatches.Count >= 2)
                                 {
-                                    var rule = new PhoneticRule();
+                                    PhoneticRule rule = new();
                                     PhoneticUtility.EncodeRule(partMatches[0].Value, ref rule);
                                     rule.ReplaceString = partMatches[1].Value;
                                     PhoneticRules.Add(rule);
@@ -494,7 +494,7 @@ namespace NetSpell.SpellChecker.Dictionary
                             case "[Words]": // dictionary word list
                                 // splits word into its parts
                                 string[] parts = tempLine.Split('/');
-                                var tempWord = new Word();
+                                Word tempWord = new();
 
                                 // part 1 = base word
                                 tempWord.Text = parts[0];
@@ -546,7 +546,7 @@ namespace NetSpell.SpellChecker.Dictionary
         public string PhoneticCode(string word)
         {
             string tempWord = word.ToUpper();
-            var code = new StringBuilder();
+            StringBuilder code = new();
 
             while (tempWord.Length > 0)
             {
@@ -710,14 +710,14 @@ namespace NetSpell.SpellChecker.Dictionary
         /// </summary>
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public PhoneticRuleCollection PhoneticRules { get; } = new PhoneticRuleCollection();
+        public PhoneticRuleCollection PhoneticRules { get; } = new();
 
         /// <summary>
         ///     Collection of affix prefixes for the base words in this dictionary
         /// </summary>
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public AffixRuleCollection PrefixRules { get; } = new AffixRuleCollection();
+        public AffixRuleCollection PrefixRules { get; } = new();
 
         /// <summary>
         ///     List of characters to use when generating suggestions using the near miss strategy
@@ -731,7 +731,7 @@ namespace NetSpell.SpellChecker.Dictionary
         /// </summary>
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public AffixRuleCollection SuffixRules { get; } = new AffixRuleCollection();
+        public AffixRuleCollection SuffixRules { get; } = new();
 
         /// <summary>
         ///     List of characters to try when generating suggestions using the near miss strategy

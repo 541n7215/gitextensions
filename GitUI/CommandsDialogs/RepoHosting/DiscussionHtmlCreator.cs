@@ -9,9 +9,9 @@ namespace GitUI.CommandsDialogs.RepoHosting
 {
     internal static class DiscussionHtmlCreator
     {
-        public static string CreateFor(IPullRequestInformation currentPullRequestInfo, List<IDiscussionEntry> entries = null)
+        public static string CreateFor(IPullRequestInformation currentPullRequestInfo, List<IDiscussionEntry>? entries = null)
         {
-            var html = new StringBuilder();
+            StringBuilder html = new();
             AddLine(html, "<html><body><style type='text/css'>");
             html.Append(CssData);
             AddLine(html, "</style>");
@@ -44,7 +44,7 @@ namespace GitUI.CommandsDialogs.RepoHosting
             return html.ToString();
         }
 
-        private static void AddLine(StringBuilder html, string input, params object[] p)
+        private static void AddLine(StringBuilder html, string input, params object?[] p)
         {
             html.AppendFormat(input + "\r\n", (from el in p select (el is null) ? "[UNKNOWN]" : el.ToString().Replace("\r", "").Replace("\n", "<br/>\n").Replace("\"", "&quot;")).ToArray());
         }
@@ -66,7 +66,7 @@ namespace GitUI.CommandsDialogs.RepoHosting
             }
         }
 
-        private static List<KeyValuePair<string, string>> _systemInfoReplacement;
+        private static List<KeyValuePair<string, string>>? _systemInfoReplacement;
 
         private static IEnumerable<KeyValuePair<string, string>> SystemInfoReplacement
         {
@@ -94,7 +94,7 @@ namespace GitUI.CommandsDialogs.RepoHosting
             }
         }
 
-        private static string _cssData;
+        private static string? _cssData;
         private const string _cssDataRaw = @"
 body {
     background: SC.Control;

@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using GitCommands;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.RepositoryHosts;
-using JetBrains.Annotations;
+using Microsoft;
 
 namespace GitUI
 {
@@ -33,7 +33,10 @@ namespace GitUI
 
                     foreach (var plugin in ManagedExtensibility.GetExports<IGitPlugin>().Select(lazy => lazy.Value))
                     {
-                        plugin.SettingsContainer = new GitPluginSettingsContainer(plugin.Name);
+                        Validates.NotNull(plugin.Description);
+
+                        // Description for old plugin setting processing as key
+                        plugin.SettingsContainer = new GitPluginSettingsContainer(plugin.Id, plugin.Description);
 
                         if (plugin is IRepositoryHostPlugin repositoryHostPlugin)
                         {
@@ -50,8 +53,7 @@ namespace GitUI
             }
         }
 
-        [CanBeNull]
-        public static IRepositoryHostPlugin TryGetGitHosterForModule(GitModule module)
+        public static IRepositoryHostPlugin? TryGetGitHosterForModule(GitModule module)
         {
             if (!module.IsValidGitWorkingDir())
             {

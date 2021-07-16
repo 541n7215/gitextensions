@@ -43,23 +43,30 @@ namespace GitUI.Theming
             NativeMethods.RECTCLS pcliprect)
         {
             using var ctx = CreateRenderContext(hdc, pcliprect);
-            switch ((Parts)partid)
+            return (Parts)partid switch
             {
-                case Parts.LVP_GROUPHEADERLINE:
-                    return RenderGroupHeaderLine(ctx, prect);
+                Parts.LVP_GROUPHEADERLINE => RenderGroupHeaderLine(ctx, prect),
+                Parts.LVP_EXPANDBUTTON => RenderExpandButton(ctx, (State.ExpandButton)stateid, prect),
+                Parts.LVP_COLLAPSEBUTTON => RenderCollapseButton(ctx, (State.CollapseButton)stateid, prect),
+                Parts.LVP_LISTITEM => RenderItemBackground(ctx, (State.ListItem)stateid, prect),
+                Parts.LVP_COLUMNDETAIL => RenderColumnDetail(ctx, prect),
+                _ => Unhandled
+            };
+        }
 
-                case Parts.LVP_EXPANDBUTTON:
-                    return RenderExpandButton(ctx, (State.ExpandButton)stateid, prect);
+        private int RenderColumnDetail(Context ctx, Rectangle prect)
+        {
+            int width = Math.Max(1, prect.Width / 2);
+            using SolidBrush brush = new(Color.FromArgb(32, SystemColors.HotTrack));
+            ctx.Graphics.FillRectangle(
+                brush,
+                Rectangle.FromLTRB(
+                    prect.Right - width,
+                    prect.Top,
+                    prect.Right,
+                    prect.Bottom));
 
-                case Parts.LVP_COLLAPSEBUTTON:
-                    return RenderCollapseButton(ctx, (State.CollapseButton)stateid, prect);
-
-                case Parts.LVP_LISTITEM:
-                    return RenderItemBackground(ctx, (State.ListItem)stateid, prect);
-
-                default:
-                    return Unhandled;
-            }
+            return Handled;
         }
 
         public override int RenderBackgroundEx(
@@ -125,7 +132,7 @@ namespace GitUI.Theming
 
         private static int RenderCollapseButton(Context ctx, State.CollapseButton stateid, Rectangle prect)
         {
-            Brush backBrush;
+            Brush? backBrush;
             Color foreColor;
             switch (stateid)
             {
@@ -152,7 +159,7 @@ namespace GitUI.Theming
 
         private static int RenderExpandButton(Context ctx, State.ExpandButton stateid, Rectangle prect)
         {
-            Brush backBrush;
+            Brush? backBrush;
             Color foreColor;
             switch (stateid)
             {
@@ -177,7 +184,7 @@ namespace GitUI.Theming
             return Handled;
         }
 
-        private static void RenderArrow(Context ctx, Rectangle prect, Brush backBrush,
+        private static void RenderArrow(Context ctx, Rectangle prect, Brush? backBrush,
             Color foreColor, bool down)
         {
             int h = prect.Height / 4;
@@ -211,7 +218,7 @@ namespace GitUI.Theming
                     ctx.Graphics.FillEllipse(backBrush, prect.Inclusive());
                 }
 
-                using var forePen = new Pen(foreColor, DpiUtil.Scale(2));
+                using Pen forePen = new(foreColor, DpiUtil.Scale(2));
                 ctx.Graphics.DrawLines(forePen, arrowPoints);
             }
         }

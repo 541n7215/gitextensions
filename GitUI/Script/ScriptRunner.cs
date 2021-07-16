@@ -1,19 +1,20 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using GitCommands;
+using GitExtUtils;
 using GitUI.HelperDialogs;
 using GitUI.NBugReports;
 using GitUIPluginInterfaces;
+using Microsoft;
 
 namespace GitUI.Script
 {
     /// <summary>Runs scripts.</summary>
     public static class ScriptRunner
     {
-        /// <summary>Tries to run scripts identified by a <paramref name="command"/></summary>
-        public static CommandStatus ExecuteScriptCommand(IWin32Window owner, GitModule module, int command, IGitUICommands uiCommands, RevisionGridControl revisionGrid)
+        /// <summary>Tries to run scripts identified by a <paramref name="command"/>.</summary>
+        public static CommandStatus ExecuteScriptCommand(IWin32Window owner, GitModule module, int command, IGitUICommands uiCommands, RevisionGridControl? revisionGrid)
         {
             var anyScriptExecuted = false;
             var needsGridRefresh = false;
@@ -31,7 +32,7 @@ namespace GitUI.Script
             return new CommandStatus(anyScriptExecuted, needsGridRefresh);
         }
 
-        public static CommandStatus RunScript(IWin32Window owner, IGitModule module, string scriptKey, IGitUICommands uiCommands, RevisionGridControl revisionGrid)
+        public static CommandStatus RunScript(IWin32Window owner, IGitModule module, string? scriptKey, IGitUICommands uiCommands, RevisionGridControl? revisionGrid)
         {
             try
             {
@@ -39,25 +40,22 @@ namespace GitUI.Script
             }
             catch (ExternalOperationException ex) when (ex is not UserExternalOperationException)
             {
-                ThreadHelper.AssertOnUIThread();
-                throw new UserExternalOperationException($"{Strings.ScriptErrorFailedToExecute}: '{scriptKey}'", ex);
+                throw new UserExternalOperationException($"{TranslatedStrings.ScriptErrorFailedToExecute}: '{scriptKey}'", ex);
             }
         }
 
-        private static CommandStatus RunScriptInternal(IWin32Window owner, IGitModule module, string scriptKey, IGitUICommands uiCommands,
-            RevisionGridControl revisionGrid)
+        private static CommandStatus RunScriptInternal(IWin32Window owner, IGitModule module, string? scriptKey, IGitUICommands uiCommands, RevisionGridControl? revisionGrid)
         {
             if (string.IsNullOrEmpty(scriptKey))
             {
                 return false;
             }
 
-            ScriptInfo scriptInfo = ScriptManager.GetScript(scriptKey);
+            ScriptInfo? scriptInfo = ScriptManager.GetScript(scriptKey);
             if (scriptInfo is null)
             {
-                ThreadHelper.AssertOnUIThread();
-                throw new UserExternalOperationException($"{Strings.ScriptErrorCantFind}: '{scriptKey}'",
-                    new ExternalOperationException(command: null, arguments: null, module.WorkingDir, innerException: null));
+                throw new UserExternalOperationException($"{TranslatedStrings.ScriptErrorCantFind}: '{scriptKey}'",
+                    new ExternalOperationException(workingDirectory: module.WorkingDir));
             }
 
             if (string.IsNullOrEmpty(scriptInfo.Command))
@@ -65,35 +63,35 @@ namespace GitUI.Script
                 return false;
             }
 
-            string arguments = scriptInfo.Arguments;
+            string? arguments = scriptInfo.Arguments;
             if (!string.IsNullOrEmpty(arguments) && revisionGrid is null)
             {
-                string optionDependingOnSelectedRevision
+                string? optionDependingOnSelectedRevision
                     = ScriptOptionsParser.Options.FirstOrDefault(option => ScriptOptionsParser.DependsOnSelectedRevision(option)
                                                                         && ScriptOptionsParser.Contains(arguments, option));
-                if (optionDependingOnSelectedRevision is object)
+                if (optionDependingOnSelectedRevision is not null)
                 {
-                    ThreadHelper.AssertOnUIThread();
-                    throw new UserExternalOperationException($"{Strings.ScriptText}: '{scriptKey}'{Environment.NewLine}'{optionDependingOnSelectedRevision}' {Strings.ScriptErrorOptionWithoutRevisionGridText}",
-                        new ExternalOperationException(scriptInfo.Command, arguments, module.WorkingDir, innerException: null));
+                    throw new UserExternalOperationException($"{TranslatedStrings.ScriptText}: '{scriptKey}'{Environment.NewLine}'{optionDependingOnSelectedRevision}' {TranslatedStrings.ScriptErrorOptionWithoutRevisionGridText}",
+                        new ExternalOperationException(scriptInfo.Command, arguments, module.WorkingDir));
                 }
             }
 
             if (scriptInfo.AskConfirmation &&
-                MessageBox.Show(owner, $"{Strings.ScriptConfirmExecute}: '{scriptInfo.Name}'?", Strings.ScriptText,
+                MessageBox.Show(owner, $"{TranslatedStrings.ScriptConfirmExecute}: '{scriptInfo.Name}'?", TranslatedStrings.ScriptText,
                                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
             {
                 return false;
             }
 
-            string originalCommand = scriptInfo.Command;
-            (string argument, bool abort) = ScriptOptionsParser.Parse(scriptInfo.Arguments, module, owner, revisionGrid);
+            string? originalCommand = scriptInfo.Command;
+            (string? argument, bool abort) = ScriptOptionsParser.Parse(scriptInfo.Arguments, module, owner, revisionGrid);
             if (abort)
             {
-                ThreadHelper.AssertOnUIThread();
-                throw new UserExternalOperationException($"{Strings.ScriptText}: '{scriptKey}'{Environment.NewLine}{Strings.ScriptErrorOptionWithoutRevisionText}",
-                    new ExternalOperationException(scriptInfo.Command, arguments, module.WorkingDir, innerException: null));
+                throw new UserExternalOperationException($"{TranslatedStrings.ScriptText}: '{scriptKey}'{Environment.NewLine}{TranslatedStrings.ScriptErrorOptionWithoutRevisionText}",
+                    new ExternalOperationException(scriptInfo.Command, arguments, module.WorkingDir));
             }
+
+            Validates.NotNull(argument);
 
             string command = OverrideCommandWhenNecessary(originalCommand);
             command = ExpandCommandVariables(command, module);
@@ -115,9 +113,9 @@ namespace GitUI.Script
                 {
                     foreach (var plugin in PluginRegistry.Plugins)
                     {
-                        if (plugin.Description.ToLower().Equals(command, StringComparison.CurrentCultureIgnoreCase))
+                        if (string.Equals(plugin.Name, command, StringComparison.CurrentCultureIgnoreCase))
                         {
-                            var eventArgs = new GitUIEventArgs(owner, uiCommands);
+                            GitUIEventArgs eventArgs = new(owner, uiCommands);
                             return new CommandStatus(executed: true, needsGridRefresh: plugin.Execute(eventArgs));
                         }
                     }
@@ -136,7 +134,7 @@ namespace GitUI.Script
                 command = command.Replace(NavigateToPrefix, string.Empty);
                 if (!string.IsNullOrEmpty(command))
                 {
-                    var revisionRef = new Executable(command, module.WorkingDir).GetOutputLines(argument).FirstOrDefault();
+                    string revisionRef = new Executable(command, module.WorkingDir).GetOutputLines(argument).FirstOrDefault();
 
                     if (revisionRef is not null)
                     {
@@ -149,7 +147,11 @@ namespace GitUI.Script
 
             if (!scriptInfo.RunInBackground)
             {
-                FormProcess.ShowDialog(owner, command, argument, module.WorkingDir, null, true);
+                bool success = FormProcess.ShowDialog(owner, command, argument, module.WorkingDir, null, true);
+                if (!success)
+                {
+                    return false;
+                }
             }
             else
             {

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using GitCommands;
 
 namespace GitExtUtils
 {
@@ -38,7 +37,7 @@ namespace GitExtUtils
     /// </example>
     public sealed class GitArgumentBuilder : ArgumentBuilder
     {
-        private static readonly Regex CommandRegex = new Regex("^[a-z0-9_.-]+$", RegexOptions.Compiled);
+        private static readonly Regex CommandRegex = new("^[a-z0-9_.-]+$", RegexOptions.Compiled);
 
         private readonly List<GitConfigItem> _configItems;
         private readonly ArgumentString _gitArgs;
@@ -112,7 +111,7 @@ namespace GitExtUtils
             var capacity = _configItems.Sum(i => i.Key.Length + i.Value.Length + 7) + _command.Length + 1 + arguments.Length;
             capacity += gitArgsLength + 1;
 
-            var str = new StringBuilder(capacity);
+            StringBuilder str = new(capacity);
 
             if (gitArgsLength > 0)
             {

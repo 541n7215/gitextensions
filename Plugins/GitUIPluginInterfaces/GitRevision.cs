@@ -21,24 +21,22 @@ namespace GitUIPluginInterfaces
         /// Artificial commit for the combined diff</summary>
         public const string CombinedDiffGuid = "3333333333333333333333333333333333333333";
 
-        public static readonly Regex Sha1HashRegex = new Regex(@"^[a-f\d]{40}$", RegexOptions.Compiled);
-        public static readonly Regex Sha1HashShortRegex = new Regex(@"\b[a-f\d]{7,40}\b", RegexOptions.Compiled);
+        public static readonly Regex Sha1HashRegex = new(@"^[a-f\d]{40}$", RegexOptions.Compiled);
+        public static readonly Regex Sha1HashShortRegex = new(@"\b[a-f\d]{7,40}\b", RegexOptions.Compiled);
 
-        private BuildInfo _buildStatus;
+        private BuildInfo? _buildStatus;
+        private string? _body;
 
-        public GitRevision([NotNull] ObjectId objectId)
+        public GitRevision(ObjectId objectId)
         {
             ObjectId = objectId ?? throw new ArgumentNullException(nameof(objectId));
         }
 
-        [NotNull]
         public ObjectId ObjectId { get; }
 
-        [NotNull]
         public string Guid => ObjectId.ToString();
 
         // TODO this should probably be null when not yet populated, similar to how ParentIds works
-        [NotNull, ItemNotNull]
         public IReadOnlyList<IGitRef> Refs { get; set; } = Array.Empty<IGitRef>();
 
         /// <summary>
@@ -48,20 +46,25 @@ namespace GitUIPluginInterfaces
         /// Can return <c>null</c> in cases where the data has not been populated
         /// for whatever reason.
         /// </remarks>
-        [CanBeNull, ItemNotNull]
-        public IReadOnlyList<ObjectId> ParentIds { get; set; }
+        public IReadOnlyList<ObjectId>? ParentIds { get; set; }
 
-        public ObjectId TreeGuid { get; set; }
+        public ObjectId? TreeGuid { get; set; }
 
-        public string Author { get; set; }
-        public string AuthorEmail { get; set; }
-        public DateTime AuthorDate { get; set; }
-        public string Committer { get; set; }
-        public string CommitterEmail { get; set; }
-        public DateTime CommitDate { get; set; }
+        public string? Author { get; set; }
+        public string? AuthorEmail { get; set; }
 
-        [CanBeNull]
-        public BuildInfo BuildStatus
+        // Git native datetime format
+        public long AuthorUnixTime { get; set; }
+        public DateTime AuthorDate => FromUnixTimeSeconds(AuthorUnixTime);
+        public string? Committer { get; set; }
+        public string? CommitterEmail { get; set; }
+        public long CommitUnixTime { get; set; }
+        public DateTime CommitDate => FromUnixTimeSeconds(CommitUnixTime);
+
+        private static DateTime FromUnixTimeSeconds(long unixTime)
+            => unixTime == 0 ? DateTime.MaxValue : DateTimeOffset.FromUnixTimeSeconds(unixTime).LocalDateTime;
+
+        public BuildInfo? BuildStatus
         {
             get => _buildStatus;
             set
@@ -77,16 +80,20 @@ namespace GitUIPluginInterfaces
         }
 
         public string Subject { get; set; } = "";
-        [CanBeNull]
-        public string Body { get; set; }
+
+        public string? Body
+        {
+            // Body is not stored by default for older commits to reduce memory usage
+            // Body do not have to be stored explicitly if same as subject and not multiline
+            get => _body ?? (!HasMultiLineMessage ? Subject : null);
+            set => _body = value;
+        }
 
         public bool HasMultiLineMessage { get; set; }
         public bool HasNotes { get; set; }
 
         // UTF-8 when is null or empty
-        public string MessageEncoding { get; set; }
-
-        public string Name { get; set; }
+        public string? MessageEncoding { get; set; }
 
         public override string ToString() => $"{ObjectId.ToShortString()}:{Subject}";
 
@@ -97,15 +104,14 @@ namespace GitUIPluginInterfaces
 
         public bool HasParent => ParentIds?.Count > 0;
 
-        [CanBeNull]
-        public ObjectId FirstParentId => ParentIds?.FirstOrDefault();
+        public ObjectId? FirstParentId => ParentIds?.FirstOrDefault();
 
         #region INotifyPropertyChanged
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

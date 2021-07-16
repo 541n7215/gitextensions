@@ -1,8 +1,10 @@
 ﻿using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using FluentAssertions;
 using GitCommands;
 using GitCommands.Settings;
 using GitUIPluginInterfaces;
@@ -14,6 +16,27 @@ namespace GitCommandsTests.Settings
     internal sealed class AppSettingsTests
     {
         private const string SettingsFileContent = @"<?xml version=""1.0"" encoding=""utf-8""?><dictionary />";
+
+        [TestCase(null, "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("\t", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("master", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("feature/test/mystuff", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("releases", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("releases/4.5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("release", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("release/a", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("release/5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("release/a4.5", "https://git-extensions-documentation.readthedocs.org/en/main/")]
+        [TestCase("release/4.5", "https://git-extensions-documentation.readthedocs.org/en/release-4.5/")]
+        [TestCase("release/40.501", "https://git-extensions-documentation.readthedocs.org/en/release-40.501/")]
+        public void SetDocumentationBaseUrl_should_currectly_append_verison(string currentGitBranch, string expected)
+        {
+            AppSettings.GetTestAccessor().ResetDocumentationBaseUrl();
+
+            AppSettings.SetDocumentationBaseUrl(currentGitBranch);
+            AppSettings.DocumentationBaseUrl.Should().Be(expected);
+        }
 
         [Test]
         [TestCaseSource(nameof(TestCases))]
@@ -30,11 +53,14 @@ namespace GitCommandsTests.Settings
                     .GetProperty(nameof(ISetting<string>.Value));
             }
 
-            var filePath = Path.GetTempFileName();
+            using TempFileCollection tempFiles = new();
+            string filePath = tempFiles.AddExtension(".settings");
+            tempFiles.AddFile(filePath + ".backup", keepFile: false);
 
             File.WriteAllText(filePath, SettingsFileContent);
 
-            var container = new RepoDistSettings(null, GitExtSettingsCache.Create(filePath), SettingLevel.Unknown);
+            using GitExtSettingsCache cache = GitExtSettingsCache.Create(filePath);
+            RepoDistSettings container = new(null, cache, SettingLevel.Unknown);
             object storedValue = null;
 
             // Act
@@ -62,11 +88,14 @@ namespace GitCommandsTests.Settings
                     .GetProperty(nameof(ISetting<string>.Value));
             }
 
-            var filePath = Path.GetTempFileName();
+            using TempFileCollection tempFiles = new();
+            string filePath = tempFiles.AddExtension(".settings");
+            tempFiles.AddFile(filePath + ".backup", keepFile: false);
 
             File.WriteAllText(filePath, SettingsFileContent);
 
-            var container = new RepoDistSettings(null, GitExtSettingsCache.Create(filePath), SettingLevel.Unknown);
+            using GitExtSettingsCache cache = GitExtSettingsCache.Create(filePath);
+            RepoDistSettings container = new(null, cache, SettingLevel.Unknown);
             object storedValue = null;
 
             // Act
@@ -146,7 +175,6 @@ namespace GitCommandsTests.Settings
                 yield return (properties[nameof(AppSettings.ShowConEmuTab)], true, false, true);
                 yield return (properties[nameof(AppSettings.ConEmuStyle)], "<Solarized Light>", true, true);
                 yield return (properties[nameof(AppSettings.ConEmuTerminal)], "bash", true, true);
-                yield return (properties[nameof(AppSettings.ConEmuFontSize)], "12", true, true);
                 yield return (properties[nameof(AppSettings.ShowGpgInformation)], true, false, true);
 
                 yield return (properties[nameof(AppSettings.ShowSplitViewLayout)], true, false, false);
@@ -165,7 +193,7 @@ namespace GitCommandsTests.Settings
                 yield return (properties[nameof(AppSettings.CommitInfoShowTagThisCommitDerivesFrom)], true, false, false);
                 yield return (properties[nameof(AppSettings.AvatarImageCacheDays)], 5, false, false);
                 yield return (properties[nameof(AppSettings.ShowAuthorAvatarInCommitInfo)], true, false, false);
-                yield return (properties[nameof(AppSettings.AvatarProvider)], AvatarProvider.Gravatar, false, false);
+                yield return (properties[nameof(AppSettings.AvatarProvider)], AvatarProvider.Default, false, false);
                 yield return (properties[nameof(AppSettings.Translation)], string.Empty, true, false);
                 yield return (properties[nameof(AppSettings.UserProfileHomeDir)], false, false, false);
                 yield return (properties[nameof(AppSettings.CustomHomeDir)], string.Empty, true, false);

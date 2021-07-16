@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using CommonTestUtils;
 using FluentAssertions;
+using GitCommands;
 using GitUI;
 using GitUI.CommandsDialogs;
 using ICSharpCode.TextEditor;
@@ -19,6 +20,9 @@ namespace GitExtensions.UITests.CommandsDialogs
     {
         // Created once for the fixture
         private ReferenceRepository _referenceRepository;
+
+        // Track the original setting value
+        private bool _showAvailableDiffTools;
 
         // Created once for each test
         private GitUICommands _commands;
@@ -38,9 +42,20 @@ namespace GitExtensions.UITests.CommandsDialogs
             _commands = new GitUICommands(_referenceRepository.Module);
         }
 
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            // Remember the current setting...
+            _showAvailableDiffTools = AppSettings.ShowAvailableDiffTools;
+
+            // ...and stop loading custom diff tools
+            AppSettings.ShowAvailableDiffTools = false;
+        }
+
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
+            AppSettings.ShowAvailableDiffTools = _showAvailableDiffTools;
             _referenceRepository.Dispose();
         }
 
@@ -258,8 +273,8 @@ namespace GitExtensions.UITests.CommandsDialogs
         public void Should_unstage_only_filtered_on_UnstageAll()
         {
             _referenceRepository.Reset();
-            _referenceRepository.CreateRepoFile("file1A.txt", "Test");
-            _referenceRepository.CreateRepoFile("file1B.txt", "Test");
+            _referenceRepository.CreateRepoFile("file1A-Привет.txt", "Test");   // escaped and not escaped in the same string
+            _referenceRepository.CreateRepoFile("file1B-두다.txt", "Test");      // escaped octal code points (Korean Hangul in this case)
             _referenceRepository.CreateRepoFile("file2.txt", "Test");
 
             RunFormTest(async form =>
@@ -281,7 +296,15 @@ namespace GitExtensions.UITests.CommandsDialogs
 
                 var testform = form.GetTestAccessor();
 
+                Assert.AreEqual(0, testform.StagedList.AllItemsCount);
+                Assert.AreEqual(3, testform.UnstagedList.AllItemsCount);
+
+                testform.StagedList.SetFilter("");
                 testform.StageAllToolItem.PerformClick();
+
+                Assert.AreEqual(3, testform.StagedList.AllItemsCount);
+                Assert.AreEqual(0, testform.UnstagedList.AllItemsCount);
+
                 testform.StagedList.ClearSelected();
                 testform.StagedList.SetFilter("file1");
 
@@ -453,23 +476,16 @@ namespace GitExtensions.UITests.CommandsDialogs
             UITest.RunForm(
                 showForm: () =>
                 {
-                    switch (commitKind)
+                    Assert.True(commitKind switch
                     {
-                        case CommitKind.Normal:
-                            Assert.True(_commands.StartCommitDialog(owner: null));
-                            break;
+                        CommitKind.Normal => _commands.StartCommitDialog(owner: null),
+                        CommitKind.Squash => _commands.StartSquashCommitDialog(owner: null, _referenceRepository.Module.GetRevision()),
+                        CommitKind.Fixup => _commands.StartFixupCommitDialog(owner: null, _referenceRepository.Module.GetRevision()),
+                        _ => throw new ArgumentException($"Unsupported commit kind: {commitKind}", nameof(commitKind))
+                    });
 
-                        case CommitKind.Squash:
-                            Assert.True(_commands.StartSquashCommitDialog(owner: null, _referenceRepository.Module.GetRevision()));
-                            break;
-
-                        case CommitKind.Fixup:
-                            Assert.True(_commands.StartFixupCommitDialog(owner: null, _referenceRepository.Module.GetRevision()));
-                            break;
-
-                        default:
-                            throw new ArgumentException($"Unsupported commit kind: {commitKind}", nameof(commitKind));
-                    }
+                    // Await updated FileViewer
+                    ThreadHelper.JoinPendingOperations();
                 },
                 testDriverAsync);
         }

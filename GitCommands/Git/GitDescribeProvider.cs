@@ -27,7 +27,7 @@ namespace GitCommands.Git
         /// <inheritdoc />
         public (string precedingTag, string commitCount) Get(ObjectId revision)
         {
-            string description = GetModule().GetDescribe(revision);
+            string? description = GetModule().GetDescribe(revision);
             if (string.IsNullOrEmpty(description))
             {
                 return (string.Empty, string.Empty);

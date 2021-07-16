@@ -19,9 +19,9 @@ namespace GitUITests.BranchTreePanel
     {
         private const int expectedMenuItems = 7;
         private const int expectedTotal = expectedMenuItems + 1; // + end separator
-        private Queue<ToolStripMenuItem> _factoryQueue = new Queue<ToolStripMenuItem>();
+        private Queue<ToolStripMenuItem> _factoryQueue = new();
         private IMenuItemFactory _factory = null;
-        private TestBranchNode _testNode = new TestBranchNode();
+        private TestBranchNode _testNode = new();
 
         [SetUp]
         public void Setup()
@@ -88,7 +88,7 @@ namespace GitUITests.BranchTreePanel
         public void WithActiveBranch_HasFilteredItems()
         {
             // Arrange
-            var generator = new LocalBranchMenuItems<TestBranchNode>(_factory);
+            LocalBranchMenuItems<TestBranchNode> generator = new(_factory);
 
             // Act
             const int notFiltered = 2; // create branch, rename
@@ -119,7 +119,7 @@ namespace GitUITests.BranchTreePanel
         // can't use a substitute here because of class constraint on INode
         public class TestBranchNode : INode, IGitRefActions, ICanDelete, ICanRename
         {
-            public Stack<string> CallStatck { get; set; } = new Stack<string>();
+            public Stack<string> CallStatck { get; } = new Stack<string>();
 
             public bool Checkout()
             {

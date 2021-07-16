@@ -11,13 +11,13 @@ namespace GitUI.UserControls
 {
     public partial class BranchSelector : GitModuleControl
     {
-        public event EventHandler SelectedIndexChanged;
+        public event EventHandler? SelectedIndexChanged;
 
         private readonly bool _isLoading;
-        private IReadOnlyList<ObjectId> _containRevisions;
-        private string[] _localBranches;
-        private string[] _remoteBranches;
-        public ObjectId CommitToCompare;
+        private IReadOnlyList<ObjectId>? _containRevisions;
+        private string[]? _localBranches;
+        private string[]? _remoteBranches;
+        public ObjectId? CommitToCompare;
 
         public BranchSelector()
         {
@@ -38,7 +38,7 @@ namespace GitUI.UserControls
         public string SelectedBranchName => Branches.Text;
         public override string Text => Branches.Text;
 
-        public void Initialize(bool remote, IReadOnlyList<ObjectId> containRevisions)
+        public void Initialize(bool remote, IReadOnlyList<ObjectId>? containRevisions)
         {
             lbChanges.Text = "";
             LocalBranch.Checked = !remote;
@@ -66,27 +66,17 @@ namespace GitUI.UserControls
 
             string[] GetLocalBranches()
             {
-                if (_localBranches is null)
-                {
-                    _localBranches = Module.GetRefs(false).Select(b => b.Name).ToArray();
-                }
-
-                return _localBranches;
+                return _localBranches ??= Module.GetRefs(RefsFilter.Heads).Select(b => b.Name).ToArray();
             }
 
             string[] GetRemoteBranches()
             {
-                if (_remoteBranches is null)
-                {
-                    _remoteBranches = Module.GetRefs(true, true).Where(h => h.IsRemote && !h.IsTag).Select(b => b.Name).ToArray();
-                }
-
-                return _remoteBranches;
+                return _remoteBranches ??= Module.GetRefs(RefsFilter.Remotes).Select(b => b.Name).ToArray();
             }
 
             string[] GetContainsRevisionBranches()
             {
-                var result = new HashSet<string>();
+                HashSet<string> result = new();
 
                 if (_containRevisions.Count > 0)
                 {

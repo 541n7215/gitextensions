@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
@@ -17,7 +18,45 @@ namespace ResourceManager.Xliff
             = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static |
               BindingFlags.NonPublic | BindingFlags.SetField;
 
-        private static bool AllowTranslateProperty(string text)
+        private static readonly HashSet<string> _processedAssemblies = new();
+
+        private static readonly HashSet<string> _translatableItemInComponentNames = new(StringComparer.Ordinal)
+        {
+            "AccessibleDescription",
+            "AccessibleName",
+            "Caption",
+            "Text",
+            "ToolTipText",
+            "Title"
+        };
+
+        private static bool IsTranslatableItemInComponent(PropertyInfo property)
+        {
+            return property.PropertyType == typeof(string) &&
+                   _translatableItemInComponentNames.Contains(property.Name);
+        }
+
+        private static readonly string[] UnTranslatableDLLs =
+        {
+            "mscorlib",
+            "Microsoft",
+            "Presentation",
+            "WindowsBase",
+            "ICSharpCode",
+            "access",
+            "SMDiag",
+            "System",
+            "vshost",
+            "Atlassian",
+            "RestSharp",
+            "EnvDTE",
+            "Newtonsoft",
+            "ConEmuWinForms",
+            "TranslationApp",
+            "netstandard",
+        };
+
+        private static bool AllowTranslateProperty([NotNullWhen(returnValue: true)] string? text)
         {
             if (text is null)
             {
@@ -27,7 +66,7 @@ namespace ResourceManager.Xliff
             return text.Any(char.IsLetter);
         }
 
-        public static IEnumerable<(string name, object item)> GetObjFields(object obj, string objName)
+        public static IEnumerable<(string name, object item)> GetObjFields(object obj, string? objName)
         {
             if (objName is not null)
             {
@@ -156,7 +195,7 @@ namespace ResourceManager.Xliff
                             if (list[index] is string listValue)
                             {
                                 string ProvideDefaultValue() => listValue;
-                                string value = translation.TranslateItem(category, itemName, "Item" + index,
+                                string? value = translation.TranslateItem(category, itemName, "Item" + index,
                                     ProvideDefaultValue);
 
                                 if (!string.IsNullOrEmpty(value))
@@ -169,7 +208,7 @@ namespace ResourceManager.Xliff
                     else if (property.PropertyType.IsEquivalentTo(typeof(string)))
                     {
                         string ProvideDefaultValue() => (string)property.GetValue(itemObj, null);
-                        string value = translation.TranslateItem(category, itemName, property.Name, ProvideDefaultValue);
+                        string? value = translation.TranslateItem(category, itemName, property.Name, ProvideDefaultValue);
 
                         if (!string.IsNullOrEmpty(value))
                         {
@@ -197,19 +236,14 @@ namespace ResourceManager.Xliff
 
         public static void TranslateProperty(string category, object obj, string propName, ITranslation translation)
         {
-            if (obj is null)
-            {
-                return;
-            }
-
-            var property = obj.GetType().GetProperty(propName, _propertyFlags);
+            var property = obj?.GetType().GetProperty(propName, _propertyFlags);
 
             if (property is null)
             {
                 return;
             }
 
-            string value = translation.TranslateItem(category, propName, "Text", ProvideDefaultValue);
+            string? value = translation.TranslateItem(category, propName, "Text", ProvideDefaultValue);
 
             if (!string.IsNullOrEmpty(value) && property.CanWrite)
             {
@@ -246,36 +280,6 @@ namespace ResourceManager.Xliff
                    items.Count != 0;
         }
 
-        private static readonly HashSet<string> _translatableItemInComponentNames = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "AccessibleDescription",
-            "AccessibleName",
-            "Caption",
-            "Text",
-            "ToolTipText",
-            "Title"
-        };
-
-        private static bool IsTranslatableItemInComponent(PropertyInfo property)
-        {
-            return property.PropertyType == typeof(string) &&
-                   _translatableItemInComponentNames.Contains(property.Name);
-        }
-
-        private static readonly string[] UnTranslatableDLLs =
-        {
-            "mscorlib",
-            "Microsoft",
-            "Presentation",
-            "WindowsBase",
-            "ICSharpCode",
-            "access",
-            "SMDiag",
-            "System",
-            "vshost",
-            "Atlassian",
-        };
-
         /// <summary>true if the specified <see cref="Assembly"/> may be translatable.</summary>
         private static bool IsTranslatable(this Assembly assembly)
         {
@@ -287,19 +291,26 @@ namespace ResourceManager.Xliff
 
         public static Dictionary<string, List<Type>> GetTranslatableTypes()
         {
-            var dictionary = new Dictionary<string, List<Type>>();
+            Dictionary<string, List<Type>> dictionary = new();
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
+                if (_processedAssemblies.Contains(assembly.FullName))
+                {
+                    continue;
+                }
+
+                _processedAssemblies.Add(assembly.FullName);
+
                 if (!assembly.IsTranslatable())
                 {
                     continue;
                 }
 
-                foreach (var type in assembly.GetTypes())
+                foreach (var type in GetLoadableTypes(assembly))
                 {
                     if (type.IsClass && typeof(ITranslate).IsAssignableFrom(type) && !type.IsAbstract)
                     {
-                        var isPlugin = assembly.CodeBase.IndexOf("Plugins/", StringComparison.OrdinalIgnoreCase) != -1;
+                        var isPlugin = assembly.Location.IndexOf("Plugins/", StringComparison.OrdinalIgnoreCase) != -1;
                         var val = isPlugin ? ".Plugins" : "";
 
                         if (!dictionary.TryGetValue(val, out var list))
@@ -316,11 +327,11 @@ namespace ResourceManager.Xliff
             return dictionary;
         }
 
-        public static object CreateInstanceOfClass(Type type)
+        public static object? CreateInstanceOfClass(Type type)
         {
             const BindingFlags constructorFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-            object obj = null;
+            object? obj = null;
 
             var constructors = type.GetConstructors(constructorFlags);
 
@@ -340,8 +351,19 @@ namespace ResourceManager.Xliff
                 obj = parameterConstructor.Invoke(new object[parameters.Length]);
             }
 
-            Debug.Assert(obj is not null, "obj is not null");
             return obj;
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                return e.Types.Where(t => t != null);
+            }
         }
     }
 }

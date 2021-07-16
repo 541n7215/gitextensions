@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
 using GitCommands;
-using Microsoft.WindowsAPICodePack.Dialogs;
 namespace GitUI
 {
     public static class OsShellUtil
@@ -28,23 +27,24 @@ namespace GitUI
         /// <param name="filePath">Pathname of the file to open.</param>
         public static void OpenAs(string filePath)
         {
+            // filePath must not be quoted
             new Executable("rundll32.exe").Start("shell32.dll,OpenAs_RunDLL " + filePath, redirectOutput: true, outputEncoding: System.Text.Encoding.UTF8);
         }
 
         public static void SelectPathInFileExplorer(string filePath)
         {
-            OpenWithFileExplorer("/select, " + filePath);
+            OpenWithFileExplorer($"/select, {filePath.Quote()}", quote: false);
         }
 
-        public static void OpenWithFileExplorer(string arguments)
+        public static void OpenWithFileExplorer(string arguments, bool quote = true)
         {
-            new Executable("explorer.exe").Start(arguments);
+            new Executable("explorer.exe").Start(quote ? arguments.Quote() : arguments);
         }
 
         /// <summary>
-        /// opens urls even with anchor
+        /// opens urls even with anchor.
         /// </summary>
-        public static void OpenUrlInDefaultBrowser(string url)
+        public static void OpenUrlInDefaultBrowser(string? url)
         {
             if (!string.IsNullOrWhiteSpace(url))
             {
@@ -58,44 +58,19 @@ namespace GitUI
         /// <param name="ownerWindow">The owner window.</param>
         /// <param name="selectedPath">The initially selected path.</param>
         /// <returns>The path selected by the user, or null if the user cancels the dialog.</returns>
-        public static string PickFolder(IWin32Window ownerWindow, string selectedPath = null)
+        public static string? PickFolder(IWin32Window ownerWindow, string? selectedPath = null)
         {
-            if (GitCommands.Utils.EnvUtils.IsWindowsVistaOrGreater())
+            using (var dialog = new FolderBrowserDialog())
             {
-                // use Vista+ dialog
-                using (var dialog = new CommonOpenFileDialog())
+                if (selectedPath is not null)
                 {
-                    dialog.IsFolderPicker = true;
-
-                    if (selectedPath is not null)
-                    {
-                        dialog.InitialDirectory = selectedPath;
-                    }
-
-                    var result = dialog.ShowDialog(ownerWindow.Handle);
-
-                    if (result == CommonFileDialogResult.Ok)
-                    {
-                        return dialog.FileName;
-                    }
+                    dialog.SelectedPath = selectedPath;
                 }
-            }
-            else
-            {
-                // use XP-era dialog
-                using (var dialog = new FolderBrowserDialog())
+
+                var result = dialog.ShowDialog(ownerWindow);
+                if (result == DialogResult.OK)
                 {
-                    if (selectedPath is not null)
-                    {
-                        dialog.SelectedPath = selectedPath;
-                    }
-
-                    var result = dialog.ShowDialog(ownerWindow);
-
-                    if (result == DialogResult.OK)
-                    {
-                        return dialog.SelectedPath;
-                    }
+                    return dialog.SelectedPath;
                 }
             }
 

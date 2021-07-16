@@ -36,7 +36,7 @@ namespace GitUI
 
             FormClosing += GitExtensionsForm_FormClosing;
 
-            var cancelButton = new Button();
+            Button cancelButton = new();
             cancelButton.Click += CancelButtonClick;
             CancelButton = cancelButton;
 
@@ -109,7 +109,7 @@ namespace GitUI
 
             _needsPositionRestore = false;
 
-            var workingArea = _getScreensWorkingArea();
+            IReadOnlyList<Rectangle> workingArea = _getScreensWorkingArea();
             if (!workingArea.Any(screen => screen.IntersectsWith(position.Rect)))
             {
                 if (position.State == FormWindowState.Maximized)
@@ -133,21 +133,17 @@ namespace GitUI
 
             if (Owner is null || !windowCentred)
             {
-                var location = DpiUtil.Scale(position.Rect.Location, originalDpi: position.DeviceDpi);
+                Point calculatedLocation = DpiUtil.Scale(position.Rect.Location, originalDpi: position.DeviceDpi);
 
-                if (WindowPositionManager.FindWindowScreen(location, workingArea) is Rectangle rect)
-                {
-                    location.Y = rect.Y;
-                }
-
-                DesktopLocation = location;
+                DesktopLocation = WindowPositionManager.FitWindowOnScreen(new Rectangle(calculatedLocation, Size), workingArea);
             }
             else
             {
                 // Calculate location for modal form with parent
-                Location = new Point(
+                Point calculatedLocation = new(
                     Owner.Left + (Owner.Width / 2) - (Width / 2),
                     Owner.Top + (Owner.Height / 2) - (Height / 2));
+                Location = WindowPositionManager.FitWindowOnScreen(new Rectangle(calculatedLocation, Size), workingArea);
             }
 
             if (WindowState != position.State)
@@ -159,7 +155,7 @@ namespace GitUI
         }
 
         // This is a base class for many forms, which have own GetTestAccessor() methods. This has to be unique
-        internal GitExtensionsFormTestAccessor GetGitExtensionsFormTestAccessor() => new GitExtensionsFormTestAccessor(this);
+        internal GitExtensionsFormTestAccessor GetGitExtensionsFormTestAccessor() => new(this);
 
         internal readonly struct GitExtensionsFormTestAccessor
         {

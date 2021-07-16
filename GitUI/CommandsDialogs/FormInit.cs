@@ -11,20 +11,20 @@ namespace GitUI.CommandsDialogs
     public partial class FormInit : GitExtensionsDialog
     {
         private readonly TranslationString _chooseDirectory =
-            new TranslationString("Please choose a directory.");
+            new("Please choose a directory.");
 
         private readonly TranslationString _chooseDirectoryCaption =
-            new TranslationString("Choose directory");
+            new("Choose directory");
 
         private readonly TranslationString _chooseDirectoryNotFile =
-            new TranslationString("Cannot initialize a new repository on a file.\nPlease choose a directory.");
+            new("Cannot initialize a new repository on a file.\nPlease choose a directory.");
 
         private readonly TranslationString _initMsgBoxCaption =
-            new TranslationString("Create new repository");
+            new("Create new repository");
 
-        private readonly EventHandler<GitModuleEventArgs> _gitModuleChanged;
+        private readonly EventHandler<GitModuleEventArgs>? _gitModuleChanged;
 
-        public FormInit(string dir, EventHandler<GitModuleEventArgs> gitModuleChanged)
+        public FormInit(string dir, EventHandler<GitModuleEventArgs>? gitModuleChanged)
             : base(commands: null, enablePositionRestore: true)
         {
             _gitModuleChanged = gitModuleChanged;
@@ -61,11 +61,11 @@ namespace GitUI.CommandsDialogs
 
             if (File.Exists(directoryPath))
             {
-                MessageBox.Show(this, _chooseDirectoryNotFile.Text, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, _chooseDirectoryNotFile.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            var module = new GitModule(directoryPath);
+            GitModule module = new(directoryPath);
 
             if (!System.IO.Directory.Exists(module.WorkingDir))
             {
@@ -90,7 +90,7 @@ namespace GitUI.CommandsDialogs
                 }
 
                 // this is going to throw if it's an invalid path (e.g. contains special chars)
-                var info = new DirectoryInfo(path);
+                DirectoryInfo info = new(path);
 
                 return Path.IsPathRooted(path.Trim());
             }
@@ -114,7 +114,7 @@ namespace GitUI.CommandsDialogs
             }
         }
 
-        internal TestAccessor GetTestAccessor() => new TestAccessor(this);
+        internal TestAccessor GetTestAccessor() => new(this);
 
         internal readonly struct TestAccessor
         {

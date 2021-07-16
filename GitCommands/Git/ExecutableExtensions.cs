@@ -17,8 +17,8 @@ namespace GitCommands
     /// </summary>
     public static class ExecutableExtensions
     {
-        private static readonly Regex _ansiCodePattern = new Regex(@"\u001B[\u0040-\u005F].*?[\u0040-\u007E]", RegexOptions.Compiled);
-        private static readonly Lazy<Encoding> _defaultOutputEncoding = new Lazy<Encoding>(() => GitModule.SystemEncoding, false);
+        private static readonly Regex _ansiCodePattern = new(@"\u001B[\u0040-\u005F].*?[\u0040-\u007E]", RegexOptions.Compiled);
+        private static readonly Lazy<Encoding> _defaultOutputEncoding = new(() => GitModule.SystemEncoding, false);
 
         /// <summary>
         /// Launches a process for the executable and returns its output.
@@ -70,7 +70,7 @@ namespace GitCommands
             CommandCache? cache = null,
             bool stripAnsiEscapeCodes = true)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             foreach (var batch in batchArguments)
             {
                 sb.Append(executable.GetOutput(batch.Argument, input, outputEncoding, cache, stripAnsiEscapeCodes));
@@ -97,10 +97,7 @@ namespace GitCommands
             CommandCache? cache = null,
             bool stripAnsiEscapeCodes = true)
         {
-            if (outputEncoding is null)
-            {
-                outputEncoding = _defaultOutputEncoding.Value;
-            }
+            outputEncoding ??= _defaultOutputEncoding.Value;
 
             if (cache is not null && cache.TryGet(arguments, out var output, out var error))
             {
@@ -119,8 +116,8 @@ namespace GitCommands
                 process.StandardInput.Close();
             }
 
-            var outputBuffer = new MemoryStream();
-            var errorBuffer = new MemoryStream();
+            MemoryStream outputBuffer = new();
+            MemoryStream errorBuffer = new();
             var outputTask = process.StandardOutput.BaseStream.CopyToAsync(outputBuffer);
             var errorTask = process.StandardError.BaseStream.CopyToAsync(errorBuffer);
             var exitTask = process.WaitForExitAsync();
@@ -246,10 +243,7 @@ namespace GitCommands
             Encoding? outputEncoding = null,
             bool stripAnsiEscapeCodes = true)
         {
-            if (outputEncoding is null)
-            {
-                outputEncoding = _defaultOutputEncoding.Value;
-            }
+            outputEncoding ??= _defaultOutputEncoding.Value;
 
             using var process = executable.Start(arguments, createWindow: false, redirectInput: input is not null, redirectOutput: true, outputEncoding);
             if (input is not null)
@@ -286,27 +280,6 @@ namespace GitCommands
         }
 
         /// <summary>
-        /// Launches a process for the executable and returns output lines as they become available.
-        /// </summary>
-        /// <param name="executable">The executable from which to launch a process.</param>
-        /// <param name="arguments">The arguments to pass to the executable.</param>
-        /// <param name="writeInput">A callback that writes bytes to the process's standard input stream, or <c>null</c> if no input is required.</param>
-        /// <param name="outputEncoding">The text encoding to use when decoding bytes read from the process's standard output and standard error streams, or <c>null</c> if the default encoding is to be used.</param>
-        /// <param name="stripAnsiEscapeCodes">A flag indicating whether ANSI escape codes should be removed from output strings.</param>
-        /// <returns>An enumerable sequence of lines that yields lines as they become available. Lines from standard output are returned first, followed by lines from standard error.</returns>
-        [MustUseReturnValue("If output lines are not required, use " + nameof(RunCommand) + " instead")]
-        public static async Task<IEnumerable<string>> GetOutputLinesAsync(
-            this IExecutable executable,
-            ArgumentString arguments = default,
-            Action<StreamWriter>? writeInput = null,
-            Encoding? outputEncoding = null,
-            bool stripAnsiEscapeCodes = true)
-        {
-            var result = await executable.ExecuteAsync(arguments, writeInput, outputEncoding, stripAnsiEscapeCodes);
-            return result.StandardOutput.SplitLines().Concat(result.StandardError.SplitLines());
-        }
-
-        /// <summary>
         /// Launches a process for the executable and returns an object detailing exit code, standard output and standard error values.
         /// </summary>
         /// <remarks>
@@ -326,10 +299,11 @@ namespace GitCommands
             ArgumentString arguments,
             Action<StreamWriter>? writeInput = null,
             Encoding? outputEncoding = null,
+            CommandCache? cache = null,
             bool stripAnsiEscapeCodes = true)
         {
             return GitUI.ThreadHelper.JoinableTaskFactory.Run(
-                () => executable.ExecuteAsync(arguments, writeInput, outputEncoding, stripAnsiEscapeCodes));
+                () => executable.ExecuteAsync(arguments, writeInput, outputEncoding, cache, stripAnsiEscapeCodes));
         }
 
         /// <summary>
@@ -346,25 +320,45 @@ namespace GitCommands
             ArgumentString arguments,
             Action<StreamWriter>? writeInput = null,
             Encoding? outputEncoding = null,
+            CommandCache? cache = null,
             bool stripAnsiEscapeCodes = true)
         {
-            if (outputEncoding is null)
+            outputEncoding ??= _defaultOutputEncoding.Value;
+
+            if (cache is not null && cache.TryGet(arguments, out var cachedOutput, out var cachedError))
             {
-                outputEncoding = _defaultOutputEncoding.Value;
+                return new ExecutionResult(
+                    CleanString(stripAnsiEscapeCodes, EncodingHelper.DecodeString(cachedOutput, error: null, ref outputEncoding)),
+                    CleanString(stripAnsiEscapeCodes, EncodingHelper.DecodeString(output: null, cachedError, ref outputEncoding)),
+                    exitCode: 0);
             }
 
             using var process = executable.Start(arguments, createWindow: false, redirectInput: writeInput is not null, redirectOutput: true, outputEncoding);
-            var outputBuffer = new MemoryStream();
-            var errorBuffer = new MemoryStream();
+            MemoryStream outputBuffer = new();
+            MemoryStream errorBuffer = new();
             var outputTask = process.StandardOutput.BaseStream.CopyToAsync(outputBuffer);
             var errorTask = process.StandardError.BaseStream.CopyToAsync(errorBuffer);
 
             if (writeInput is not null)
             {
+#if DEBUG
+                using MemoryStream mem = new();
+                using StreamWriter sw = new(mem);
+                writeInput(sw);
+
+                System.Diagnostics.Debug.WriteLine($"git {arguments} {Encoding.UTF8.GetString(mem.ToArray(), 0, (int)mem.Length)}");
+#endif
+
                 // TODO do we want to make this async?
                 writeInput(process.StandardInput);
                 process.StandardInput.Close();
             }
+#if DEBUG
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"git {arguments}");
+            }
+#endif
 
             var exitTask = process.WaitForExitAsync();
 
@@ -372,8 +366,12 @@ namespace GitCommands
 
             var output = outputEncoding.GetString(outputBuffer.GetBuffer(), 0, (int)outputBuffer.Length);
             var error = outputEncoding.GetString(errorBuffer.GetBuffer(), 0, (int)errorBuffer.Length);
-
             var exitCode = await process.WaitForExitAsync();
+
+            if (cache is not null && exitCode == 0)
+            {
+                cache.Add(arguments, outputBuffer.ToArray(), errorBuffer.ToArray());
+            }
 
             return new ExecutionResult(
                 CleanString(stripAnsiEscapeCodes, output),

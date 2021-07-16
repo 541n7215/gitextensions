@@ -8,6 +8,7 @@ using GitCommands.Git;
 using GitCommands.Git.Commands;
 using GitCommands.Utils;
 using GitUIPluginInterfaces;
+using Microsoft;
 
 namespace GitUI.CommandsDialogs.BrowseDialog
 {
@@ -26,23 +27,23 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         private const int FileChangedUpdateDelay = 1000;
 
         /// <summary>
-        /// Minimum interval between subsequent updates
+        /// Minimum interval between subsequent updates.
         /// </summary>
-        private const int MinUpdateInterval = 5000;
+        private const int MinUpdateInterval = 30000;
 
         /// <summary>
         /// Update every 5min, just to make sure something didn't slip through the cracks.
         /// </summary>
         private const int PeriodicUpdateInterval = 5 * 60 * 1000;
 
-        private readonly FileSystemWatcher _workTreeWatcher = new FileSystemWatcher();
-        private readonly FileSystemWatcher _gitDirWatcher = new FileSystemWatcher();
+        private readonly FileSystemWatcher _workTreeWatcher = new();
+        private readonly FileSystemWatcher _gitDirWatcher = new();
         private readonly System.Windows.Forms.Timer _timerRefresh;
         private bool _commandIsRunning;
         private bool _isFirstPostRepoChanged;
-        private string _gitPath;
-        private string _submodulesPath;
-        private readonly CancellationTokenSequence _statusSequence = new CancellationTokenSequence();
+        private string? _gitPath;
+        private string? _submodulesPath;
+        private readonly CancellationTokenSequence _statusSequence = new();
         private readonly GetAllChangedFilesOutputParser _getAllChangedFilesOutputParser;
 
         // Timestamps to schedule status updates, limit the update interval dynamically
@@ -63,12 +64,12 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         /// <summary>
         /// Occurs whenever git status monitor state changes.
         /// </summary>
-        public event EventHandler<GitStatusMonitorStateEventArgs> GitStatusMonitorStateChanged;
+        public event EventHandler<GitStatusMonitorStateEventArgs>? GitStatusMonitorStateChanged;
 
         /// <summary>
         /// Occurs whenever current working directory status changes.
         /// </summary>
-        public event EventHandler<GitWorkingDirectoryStatusEventArgs> GitWorkingDirectoryStatusChanged;
+        public event EventHandler<GitWorkingDirectoryStatusEventArgs?>? GitWorkingDirectoryStatusChanged;
 
         public GitStatusMonitor(IGitUICommandsSource commandsSource)
         {
@@ -116,6 +117,8 @@ namespace GitUI.CommandsDialogs.BrowseDialog
 
             void GitDirChanged(object sender, FileSystemEventArgs e)
             {
+                Validates.NotNull(_gitPath);
+
                 // git directory changed
                 if (e.FullPath.Length == _gitPath.Length)
                 {
@@ -260,9 +263,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
             }
         }
 
-        private IGitModule Module => UICommandsSource.UICommands.Module;
+        private IGitModule? Module => UICommandsSource?.UICommands.Module;
 
-        private IGitUICommandsSource UICommandsSource { get; set; }
+        private IGitUICommandsSource? UICommandsSource { get; set; }
 
         private void Init(IGitUICommandsSource commandsSource)
         {
@@ -285,7 +288,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
                     oldCommands.PostRepositoryChanged -= GitUICommands_PostRepositoryChanged;
                 }
 
-                commandsSource_activate(sender as IGitUICommandsSource);
+                commandsSource_activate((IGitUICommandsSource)sender);
             }
 
             void commandsSource_activate(IGitUICommandsSource sender)
@@ -369,6 +372,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
             {
                 return;
             }
+
+            Validates.NotNull(UICommandsSource);
+            Validates.NotNull(Module);
 
             if (IsMinimized()
                 || UICommandsSource.UICommands.RepoChangedNotifier.IsLocked ||
@@ -497,9 +503,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog
         /// <summary>
         /// Schedule a status update after the specified delay
         /// Do not change if a value is already set at a earlier time,
-        /// but respect the minimal (dynamic) update times between updates
+        /// but respect the minimal (dynamic) update times between updates.
         /// </summary>
-        /// <param name="delay">delay in milli seconds</param>
+        /// <param name="delay">delay in milliseconds.</param>
         private void ScheduleNextUpdateTime(int delay)
         {
             lock (_statusSequence)
@@ -521,7 +527,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog
 
         /// <summary>
         /// Schedule a status update from interactive changes (repo changed or refreshed)
-        /// A short delay is added
+        /// A short delay is added.
         /// </summary>
         private void ScheduleNextInteractiveTime()
         {

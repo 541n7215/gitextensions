@@ -4,7 +4,6 @@ using System.Diagnostics.Contracts;
 using System.Text;
 using System.Text.RegularExpressions;
 using GitCommands.Settings;
-using GitExtensions;
 
 namespace GitCommands.Patches
 {
@@ -17,7 +16,7 @@ namespace GitCommands.Patches
             OutsidePatch
         }
 
-        private static readonly Regex _patchHeaderRegex = new Regex("^diff --(?<type>git|cc|combined)\\s", RegexOptions.Compiled);
+        private static readonly Regex _patchHeaderRegex = new("^diff --(?<type>git|cc|combined)\\s", RegexOptions.Compiled);
 
         /// <summary>
         /// Parses a patch file into individual <see cref="Patch"/> objects.
@@ -37,7 +36,7 @@ namespace GitCommands.Patches
         {
             // TODO encoding for each file in patch should be obtained separately from .gitattributes
 
-            string[] lines = patchText.Split('\n');
+            string[] lines = patchText.Split(Delimiters.LineFeed);
             int i = 0;
 
             // skip email header
@@ -113,7 +112,7 @@ namespace GitCommands.Patches
             string? index = null;
             var changeType = PatchChangeType.ChangeFile;
             var fileType = PatchFileType.Text;
-            var patchText = new StringBuilder();
+            StringBuilder patchText = new();
 
             patchText.Append(header);
             if (lineIndex < lines.Length - 1)
@@ -295,7 +294,7 @@ namespace GitCommands.Patches
         {
             // diff --combined describe.c
             // diff --cc describe.c
-            return !Strings.IsNullOrWhiteSpace(diff) &&
+            return !string.IsNullOrWhiteSpace(diff) &&
                    (diff.StartsWith("diff --cc") || diff.StartsWith("diff --combined"));
         }
 

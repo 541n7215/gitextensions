@@ -1,10 +1,10 @@
 ﻿using GitUIPluginInterfaces.RepositoryHosts;
 
-namespace GitHub3
+namespace GitExtensions.Plugins.GitHub3
 {
     internal class GitHubHostedRemote : IHostedRemote
     {
-        private GitHubRepo _repo;
+        private GitHubRepo? _repo;
 
         public GitHubHostedRemote(string name, string owner, string remoteRepositoryName, string url)
         {
@@ -17,15 +17,10 @@ namespace GitHub3
 
         public IHostedRepository GetHostedRepository()
         {
-            if (_repo is null)
+            return _repo ??= new GitHubRepo(GitHub3Plugin.GitHub.getRepository(Owner, RemoteRepositoryName))
             {
-                _repo = new GitHubRepo(GitHub3Plugin.GitHub.getRepository(Owner, RemoteRepositoryName))
-                {
-                    CloneProtocol = CloneProtocol
-                };
-            }
-
-            return _repo;
+                CloneProtocol = CloneProtocol
+            };
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Microsoft;
 
 namespace GitUIPluginInterfaces
 {
@@ -8,7 +9,7 @@ namespace GitUIPluginInterfaces
     /// </summary>
     public class PseudoSetting : ISetting
     {
-        private readonly Func<TextBox> _textBoxCreator;
+        private readonly Func<TextBox>? _textBoxCreator;
 
         public PseudoSetting(Control control, string caption = "")
         {
@@ -16,13 +17,13 @@ namespace GitUIPluginInterfaces
             CustomControl = control;
         }
 
-        public PseudoSetting(string text, string caption = "    ", int? height = null,  Action<TextBox> textboxSettings = null)
+        public PseudoSetting(string text, string caption = "    ", int? height = null,  Action<TextBox>? textboxSettings = null)
         {
             Caption = caption;
 
             _textBoxCreator = () =>
             {
-                var textbox = new TextBox { ReadOnly = true, BorderStyle = BorderStyle.None, Text = text };
+                TextBox textbox = new() { ReadOnly = true, BorderStyle = BorderStyle.None, Text = text };
 
                 if (height.HasValue)
                 {
@@ -39,7 +40,7 @@ namespace GitUIPluginInterfaces
 
         public string Name { get; } = "PseusoSetting";
         public string Caption { get; }
-        public Control CustomControl { get; set; }
+        public Control? CustomControl { get; set; }
 
         public ISettingControlBinding CreateControlBinding()
         {
@@ -48,8 +49,9 @@ namespace GitUIPluginInterfaces
 
         private class PseudoBinding : SettingControlBinding<PseudoSetting, Control>
         {
-            private readonly Func<TextBox> _textBoxCreator;
-            public PseudoBinding(PseudoSetting setting, Control customControl, Func<TextBox> textBoxCreator)
+            private readonly Func<TextBox>? _textBoxCreator;
+
+            public PseudoBinding(PseudoSetting setting, Control? customControl, Func<TextBox>? textBoxCreator)
                 : base(setting, customControl)
             {
                 _textBoxCreator = textBoxCreator;
@@ -57,6 +59,7 @@ namespace GitUIPluginInterfaces
 
             public override Control CreateControl()
             {
+                Validates.NotNull(_textBoxCreator);
                 Setting.CustomControl = _textBoxCreator();
                 return Setting.CustomControl;
             }

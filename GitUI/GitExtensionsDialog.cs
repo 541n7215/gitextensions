@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using GitExtUtils.GitUI.Theming;
-using JetBrains.Annotations;
 
 namespace GitUI
 {
@@ -13,7 +12,7 @@ namespace GitUI
     /// <remarks>Includes support for font, hotkey, icon, translation, and position restore.</remarks>
     public partial class GitExtensionsDialog : GitModuleForm
     {
-        private static readonly Pen FooterDividerPen = new Pen(KnownColor.ControlLight.MakeBackgroundDarkerBy(0.04));
+        private static readonly Pen FooterDividerPen = new(KnownColor.ControlLight.MakeBackgroundDarkerBy(0.04));
 
         /// <summary>Creates a new <see cref="GitExtensionsForm"/> without position restore.</summary>
         [Obsolete("For VS designer and translation test only. Do not remove.")]
@@ -26,7 +25,7 @@ namespace GitUI
         /// <summary>Creates a new <see cref="GitExtensionsForm"/> indicating position restore.</summary>
         /// <param name="enablePositionRestore">Indicates whether the <see cref="Form"/>'s position
         /// will be restored upon being re-opened.</param>
-        protected GitExtensionsDialog([NotNull] GitUICommands commands, bool enablePositionRestore)
+        protected GitExtensionsDialog(GitUICommands? commands, bool enablePositionRestore)
             : base(commands, enablePositionRestore)
         {
             InitializeComponent();
@@ -44,18 +43,18 @@ namespace GitUI
         /// </summary>
         /// <remarks>
         /// The URL structure:
-        /// https://git-extensions-documentation.readthedocs.io/en/latest/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}
+        /// https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
         /// </remarks>
-        public string ManualSectionAnchorName { get; set; }
+        public string? ManualSectionAnchorName { get; set; }
 
         /// <summary>
         /// Gets or sets the name of a document pertaining to this dialog.
         /// </summary>
         /// <remarks>
         /// The URL structure:
-        /// https://git-extensions-documentation.readthedocs.io/en/latest/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}
+        /// https://git-extensions-documentation.readthedocs.io/{ManualSectionSubfolder}.html#{ManualSectionAnchorName}.
         /// </remarks>
-        public string ManualSectionSubfolder { get; set; }
+        public string? ManualSectionSubfolder { get; set; }
 
         protected override void OnHelpButtonClicked(CancelEventArgs e)
         {

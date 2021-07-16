@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Linq;
-using System.Windows.Forms;
-using GitCommands;
 
 namespace GitUI.CommandsDialogs
 {
     public partial class FormLog : GitModuleForm
     {
+        private readonly CancellationTokenSequence _viewChangesSequence = new();
+
         [Obsolete("For VS designer and translation test only. Do not remove.")]
         private FormLog()
         {
@@ -23,6 +22,21 @@ namespace GitUI.CommandsDialogs
             InitializeComplete();
         }
 
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _viewChangesSequence.Dispose();
+                components?.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
         private void FormDiffLoad(object sender, EventArgs e)
         {
             RevisionGrid.Load();
@@ -37,7 +51,8 @@ namespace GitUI.CommandsDialogs
         {
             using (WaitCursorScope.Enter())
             {
-                diffViewer.ViewChangesAsync(DiffFiles.SelectedItem);
+                _ = diffViewer.ViewChangesAsync(DiffFiles.SelectedItem,
+                    cancellationToken: _viewChangesSequence.Next());
             }
         }
 

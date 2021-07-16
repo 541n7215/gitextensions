@@ -6,18 +6,16 @@ using GitCommands;
 using GitUI.CommandsDialogs.BrowseDialog;
 using GitUI.Hotkey;
 using GitUI.Properties;
-using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.UserControls.RevisionGrid
 {
     internal class RevisionGridMenuCommands : MenuCommandsBase
     {
-        public event EventHandler MenuChanged;
+        public event EventHandler? MenuChanged;
 
-        private readonly TranslationString _quickSearchQuickHelp = new TranslationString("Start typing in revision grid to start quick search.");
-        private readonly TranslationString _noRevisionFoundError = new TranslationString("No revision found.");
+        private readonly TranslationString _quickSearchQuickHelp = new("Start typing in revision grid to start quick search.");
+        private readonly TranslationString _noRevisionFoundError = new("No revision found.");
 
         private readonly RevisionGridControl _revisionGrid;
 
@@ -29,12 +27,13 @@ namespace GitUI.UserControls.RevisionGrid
             _revisionGrid = revisionGrid;
             NavigateMenuCommands = CreateNavigateMenuCommands();
             ViewMenuCommands = CreateViewMenuCommands();
-            TranslationCategoryName = "RevisionGrid";
             Translate();
         }
 
+        protected override string TranslationCategoryName => "RevisionGrid";
+
         /// <summary>
-        /// ... "Update" because the hotkey settings might change
+        /// ... "Update" because the hotkey settings might change.
         /// </summary>
         public void CreateOrUpdateMenuCommands()
         {
@@ -329,7 +328,7 @@ namespace GitUI.UserControls.RevisionGrid
                 {
                     Name = "showRelativeDateToolStripMenuItem",
                     Text = "Show relative date",
-                    ExecuteAction = () => _revisionGrid.ToggleShowRelativeDate(null),
+                    ExecuteAction = () => _revisionGrid.ToggleShowRelativeDate(EventArgs.Empty),
                     IsCheckedFunc = () => AppSettings.RelativeDate
                 },
                 new MenuCommand
@@ -354,6 +353,13 @@ namespace GitUI.UserControls.RevisionGrid
                     Text = "Show git notes",
                     ExecuteAction = () => _revisionGrid.ToggleShowGitNotes(),
                     IsCheckedFunc = () => AppSettings.ShowGitNotes
+                },
+                new MenuCommand
+                {
+                    Name = "showCommitMessageBodyToolStripMenuItem",
+                    Text = "Show commit message body",
+                    ExecuteAction = () => _revisionGrid.ToggleShowCommitBodyInRevisionGrid(),
+                    IsCheckedFunc = () => AppSettings.ShowCommitBodyInRevisionGrid
                 },
 
                 MenuCommand.CreateSeparator(),
@@ -388,8 +394,7 @@ namespace GitUI.UserControls.RevisionGrid
             };
         }
 
-        [CanBeNull]
-        private string GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command revGridCommands)
+        private string? GetShortcutKeyDisplayStringFromRevisionGridIfAvailable(RevisionGridControl.Command revGridCommands)
         {
             // _revisionGrid is null when TranslationApp is called
             return _revisionGrid?.GetShortcutKeys(revGridCommands).ToShortcutKeyDisplayString();
@@ -412,23 +417,21 @@ namespace GitUI.UserControls.RevisionGrid
 
         public void GotoCommitExecute()
         {
-            using (var formGoToCommit = new FormGoToCommit(_revisionGrid.UICommands))
+            using FormGoToCommit formGoToCommit = new(_revisionGrid.UICommands);
+            if (formGoToCommit.ShowDialog(_revisionGrid) != DialogResult.OK)
             {
-                if (formGoToCommit.ShowDialog(_revisionGrid) != DialogResult.OK)
-                {
-                    return;
-                }
+                return;
+            }
 
-                var objectId = formGoToCommit.ValidateAndGetSelectedRevision();
+            var objectId = formGoToCommit.ValidateAndGetSelectedRevision();
 
-                if (objectId is not null)
-                {
-                    _revisionGrid.SetSelectedRevision(objectId);
-                }
-                else
-                {
-                    MessageBox.Show(_revisionGrid, _noRevisionFoundError.Text, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+            if (objectId is not null)
+            {
+                _revisionGrid.SetSelectedRevision(objectId);
+            }
+            else
+            {
+                MessageBox.Show(_revisionGrid, _noRevisionFoundError.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

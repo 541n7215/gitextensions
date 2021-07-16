@@ -11,16 +11,16 @@ namespace GitUI.Editor.Diff
 {
     public class DiffHighlightService
     {
-        public static DiffHighlightService Instance { get; } = new DiffHighlightService();
+        public static DiffHighlightService Instance { get; } = new();
 
-        protected readonly LinePrefixHelper LinePrefixHelper = new LinePrefixHelper(new LineSegmentGetter());
+        protected readonly LinePrefixHelper LinePrefixHelper = new(new LineSegmentGetter());
 
         protected DiffHighlightService()
         {
         }
 
         [ContractAnnotation("diff:null=>false")]
-        public static bool IsCombinedDiff([CanBeNull] string diff)
+        public static bool IsCombinedDiff(string? diff)
         {
             return PatchProcessor.IsCombinedDiff(diff);
         }
@@ -164,8 +164,7 @@ namespace GitUI.Editor.Diff
                 endLine = document.GetLineSegment(line);
             }
 
-            line--;
-            line--;
+            line = Math.Max(0, line - 2);
             endLine = document.GetLineSegment(line);
 
             document.MarkerStrategy.AddMarker(new TextMarker(lineSegment.Offset,

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Text.RegularExpressions;
 using GitUIPluginInterfaces;
@@ -8,8 +9,8 @@ namespace GitCommands
 {
     public static class GitRefName
     {
-        private static readonly Regex _remoteHeadRegex = new Regex("^refs/remotes/[^/]+/HEAD$", RegexOptions.Compiled);
-        private static readonly Regex _remoteNameRegex = new Regex("^refs/remotes/([^/]+)", RegexOptions.Compiled);
+        private static readonly Regex _remoteHeadRegex = new("^refs/remotes/[^/]+/HEAD$", RegexOptions.Compiled);
+        private static readonly Regex _remoteNameRegex = new("^refs/remotes/([^/]+)", RegexOptions.Compiled);
 
         /// <summary>"refs/tags/".</summary>
         public static string RefsTagsPrefix { get; } = "refs/tags/";
@@ -90,6 +91,7 @@ namespace GitCommands
         }
 
         [Pure]
+        [return: NotNullIfNotNull("branch")]
         public static string? GetFullBranchName(string? branch)
         {
             if (branch is null)

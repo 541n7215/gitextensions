@@ -7,15 +7,14 @@ using GitExtUtils;
 using GitExtUtils.GitUI.Theming;
 using GitUI.Properties;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.UserControls.RevisionGrid
 {
     public sealed class CopyContextMenuItem : ToolStripMenuItem
     {
-        private readonly TranslationString _copyToClipboardText = new TranslationString("&Copy to clipboard");
-        [CanBeNull] private Func<IReadOnlyList<GitRevision>> _revisionFunc;
+        private readonly TranslationString _copyToClipboardText = new("&Copy to clipboard");
+        private Func<IReadOnlyList<GitRevision>>? _revisionFunc;
         private uint _itemNumber;
 
         public CopyContextMenuItem()
@@ -46,7 +45,7 @@ namespace GitUI.UserControls.RevisionGrid
             AddItem(displayText, textToCopy.Join("\n"), image, hotkey);
         }
 
-        private void AddItem([NotNull] string displayText, [NotNull] string textToCopy, Image image, char? hotkey)
+        private void AddItem(string displayText, string textToCopy, Image image, char? hotkey)
         {
             if (hotkey.HasValue)
             {
@@ -61,7 +60,7 @@ namespace GitUI.UserControls.RevisionGrid
                 displayText = PrependItemNumber(displayText);
             }
 
-            var item = new ToolStripMenuItem
+            ToolStripMenuItem item = new()
             {
                 Text = displayText.TrimEnd('\r', '\n'),
                 ShowShortcutKeys = true,
@@ -76,7 +75,7 @@ namespace GitUI.UserControls.RevisionGrid
             DropDownItems.Add(item);
         }
 
-        private string[] ExtractRevisionTexts(Func<GitRevision, string> extractRevisionText)
+        private string[]? ExtractRevisionTexts(Func<GitRevision, string>? extractRevisionText)
         {
             if (extractRevisionText is null)
             {
@@ -103,11 +102,11 @@ namespace GitUI.UserControls.RevisionGrid
 
             DropDownItems.Clear();
 
-            List<string> branchNames = new List<string>();
-            List<string> tagNames = new List<string>();
+            List<string> branchNames = new();
+            List<string> tagNames = new();
             foreach (var revision in revisions)
             {
-                var refLists = new GitRefListsForRevision(revision);
+                GitRefListsForRevision refLists = new(revision);
                 branchNames.AddRange(refLists.GetAllBranchNames());
                 tagNames.AddRange(refLists.GetAllTagNames());
             }
@@ -117,7 +116,7 @@ namespace GitUI.UserControls.RevisionGrid
             // Add items for branches
             if (branchNames.Any())
             {
-                var caption = new ToolStripMenuItem { Text = Strings.Branches };
+                ToolStripMenuItem caption = new() { Text = TranslatedStrings.Branches };
                 MenuUtil.SetAsCaptionMenuItem(caption, Owner);
                 DropDownItems.Add(caption);
 
@@ -132,7 +131,7 @@ namespace GitUI.UserControls.RevisionGrid
             // Add items for tags
             if (tagNames.Any())
             {
-                var caption = new ToolStripMenuItem { Text = Strings.Tags };
+                ToolStripMenuItem caption = new() { Text = TranslatedStrings.Tags };
                 MenuUtil.SetAsCaptionMenuItem(caption, Owner);
                 DropDownItems.Add(caption);
 
@@ -146,18 +145,18 @@ namespace GitUI.UserControls.RevisionGrid
 
             // Add other items
             int count = revisions.Count();
-            AddItem(ResourceManager.Strings.GetCommitHash(count), r => r.Guid, Images.CommitId, 'C');
-            AddItem(ResourceManager.Strings.GetMessage(count), r => r.Body ?? r.Subject, Images.Message, 'M');
-            AddItem(ResourceManager.Strings.GetAuthor(count), r => $"{r.Author} <{r.AuthorEmail}>", Images.Author, 'A');
+            AddItem(ResourceManager.TranslatedStrings.GetCommitHash(count), r => r.Guid, Images.CommitId, 'C');
+            AddItem(ResourceManager.TranslatedStrings.GetMessage(count), r => r.Body ?? r.Subject, Images.Message, 'M');
+            AddItem(ResourceManager.TranslatedStrings.GetAuthor(count), r => $"{r.Author} <{r.AuthorEmail}>", Images.Author, 'A');
 
             if (count == 1 && revisions.First().AuthorDate == revisions.First().CommitDate)
             {
-                AddItem(ResourceManager.Strings.Date, r => r.AuthorDate.ToString(), Images.Date, 'D');
+                AddItem(ResourceManager.TranslatedStrings.Date, r => r.AuthorDate.ToString(), Images.Date, 'D');
             }
             else
             {
-                AddItem(ResourceManager.Strings.GetAuthorDate(count), r => r.AuthorDate.ToString(), Images.Date, 'T');
-                AddItem(ResourceManager.Strings.GetCommitDate(count), r => r.CommitDate.ToString(), Images.Date, 'D');
+                AddItem(ResourceManager.TranslatedStrings.GetAuthorDate(count), r => r.AuthorDate.ToString(), Images.Date, 'T');
+                AddItem(ResourceManager.TranslatedStrings.GetCommitDate(count), r => r.CommitDate.ToString(), Images.Date, 'D');
             }
         }
 

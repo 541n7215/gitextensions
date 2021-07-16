@@ -94,9 +94,9 @@ namespace GitExtUtils.GitUI.Theming
         /// </summary>
         public double L { get; }
 
-        public HslColor WithHue(double hue) => new HslColor(hue, S, L);
-        public HslColor WithSaturation(double saturation) => new HslColor(H, saturation, L);
-        public HslColor WithLuminosity(double luminosity) => new HslColor(H, S, luminosity);
+        public HslColor WithHue(double hue) => new(hue, S, L);
+        public HslColor WithSaturation(double saturation) => new(H, saturation, L);
+        public HslColor WithLuminosity(double luminosity) => new(H, S, luminosity);
 
         /// <summary>
         /// Converts this HSL color object to a <see cref="Color"/> object based on RGB values.
@@ -137,22 +137,13 @@ namespace GitExtUtils.GitUI.Theming
                     t--;
                 }
 
-                if (t < 1 / 6d)
+                return t switch
                 {
-                    return p + ((q - p) * 6 * t);
-                }
-
-                if (t < 1 / 2d)
-                {
-                    return q;
-                }
-
-                if (t < 2 / 3d)
-                {
-                    return p + ((q - p) * ((2 / 3d) - t) * 6);
-                }
-
-                return p;
+                    < 1 / 6d => p + ((q - p) * 6 * t),
+                    < 1 / 2d => q,
+                    < 2 / 3d => p + ((q - p) * ((2 / 3d) - t) * 6),
+                    _ => p
+                };
             }
         }
 

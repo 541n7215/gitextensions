@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Windows.Forms;
@@ -23,15 +21,15 @@ namespace GitUI.CommitInfo
         private readonly ICommitDataHeaderRenderer _commitDataHeaderRenderer;
         private readonly IDisposable _rtbResizedSubscription;
 
-        public event EventHandler<CommandEventArgs> CommandClicked;
+        public event EventHandler<CommandEventArgs>? CommandClicked;
 
         public CommitInfoHeader()
         {
             InitializeComponent();
             InitializeComplete();
 
-            var labelFormatter = new TabbedHeaderLabelFormatter();
-            var headerRenderer = new TabbedHeaderRenderStyleProvider();
+            TabbedHeaderLabelFormatter labelFormatter = new();
+            TabbedHeaderRenderStyleProvider headerRenderer = new();
 
             _commitDataManager = new CommitDataManager(() => Module);
             _commitDataHeaderRenderer = new CommitDataHeaderRenderer(labelFormatter, _dateFormatter, headerRenderer, _linkFactory);
@@ -57,7 +55,7 @@ namespace GitUI.CommitInfo
             rtbRevisionHeader.ContextMenuStrip = contextMenuStrip;
         }
 
-        public void ShowCommitInfo(GitRevision revision, IReadOnlyList<ObjectId> children)
+        public void ShowCommitInfo(GitRevision revision, IReadOnlyList<ObjectId>? children)
         {
             this.InvokeAsync(() =>
             {
@@ -83,7 +81,7 @@ namespace GitUI.CommitInfo
             return rtbRevisionHeader.GetPlainText();
         }
 
-        private void LoadAuthorImage(GitRevision revision)
+        private void LoadAuthorImage(GitRevision? revision)
         {
             var showAvatar = AppSettings.ShowAuthorAvatarInCommitInfo;
             avatarControl.Visible = showAvatar;
@@ -109,8 +107,7 @@ namespace GitUI.CommitInfo
 
         private void rtbRevisionHeader_KeyDown(object sender, KeyEventArgs e)
         {
-            var rtb = sender as RichTextBox;
-            if (rtb is null || !e.Control || e.KeyCode != Keys.C)
+            if (!e.Control || e.KeyCode != Keys.C || sender is not RichTextBox rtb)
             {
                 return;
             }
@@ -128,7 +125,7 @@ namespace GitUI.CommitInfo
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, ex.Message, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

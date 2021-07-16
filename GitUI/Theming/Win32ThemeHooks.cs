@@ -1,45 +1,49 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using EasyHook;
 using GitExtUtils.GitUI.Theming;
 using GitUI.UserControls;
+using Microsoft;
 
 namespace GitUI.Theming
 {
     internal static class Win32ThemeHooks
     {
-        private static Theme _theme;
+        private static Theme? _theme;
 
-        private static GetSysColorDelegate _getSysColorBypass;
-        private static GetSysColorBrushDelegate _getSysColorBrushBypass;
-        private static DrawThemeBackgroundDelegate _drawThemeBackgroundBypass;
-        private static DrawThemeBackgroundExDelegate _drawThemeBackgroundExBypass;
-        private static GetThemeColorDelegate _getThemeColorBypass;
-        private static DrawThemeTextDelegate _drawThemeTextBypass;
-        private static DrawThemeTextExDelegate _drawThemeTextExBypass;
-        private static CreateWindowExDelegate _createWindowExBypass;
+        private static GetSysColorDelegate? _getSysColorBypass;
+        private static GetSysColorBrushDelegate? _getSysColorBrushBypass;
+        private static DrawThemeBackgroundDelegate? _drawThemeBackgroundBypass;
+        private static DrawThemeBackgroundExDelegate? _drawThemeBackgroundExBypass;
+        private static GetThemeColorDelegate? _getThemeColorBypass;
+        private static DrawThemeTextDelegate? _drawThemeTextBypass;
+        private static DrawThemeTextExDelegate? _drawThemeTextExBypass;
+        private static CreateWindowExDelegate? _createWindowExBypass;
 
-        private static LocalHook _getSysColorHook;
-        private static LocalHook _getSysColorBrushHook;
-        private static LocalHook _drawThemeBackgroundHook;
-        private static LocalHook _drawThemeBackgroundExHook;
-        private static LocalHook _getThemeColorHook;
-        private static LocalHook _drawThemeTextHook;
-        private static LocalHook _drawThemeTextExHook;
-        private static LocalHook _createWindowExHook;
+        private static LocalHook? _getSysColorHook;
+        private static LocalHook? _getSysColorBrushHook;
+        private static LocalHook? _drawThemeBackgroundHook;
+        private static LocalHook? _drawThemeBackgroundExHook;
+        private static LocalHook? _getThemeColorHook;
+        private static LocalHook? _drawThemeTextHook;
+        private static LocalHook? _drawThemeTextExHook;
+        private static LocalHook? _createWindowExHook;
 
-        private static ThemeRenderer[] _renderers;
-        private static SystemDialogDetector _systemDialogDetector;
+        private static ThemeRenderer[]? _renderers;
+        private static SystemDialogDetector? _systemDialogDetector;
 
-        public static event Action<IntPtr> WindowCreated;
+        public static event Action<IntPtr>? WindowCreated;
 
         internal static ThemeSettings ThemeSettings { private get; set; } = ThemeSettings.Default;
 
-        private static readonly HashSet<NativeListView> InitializingListViews = new HashSet<NativeListView>();
+        private static readonly HashSet<NativeListView> InitializingListViews = new();
+        private static ScrollBarRenderer? _scrollBarRenderer;
+        private static ListViewRenderer? _listViewRenderer;
+        private static HeaderRenderer? _headerRenderer;
+        private static TreeViewRenderer? _treeViewRenderer;
 
         private static bool BypassThemeRenderers =>
             ThemeSettings.UseSystemVisualStyle || BypassAnyHook;
@@ -106,17 +110,12 @@ namespace GitUI.Theming
 
         private static void CreateRenderers()
         {
-            ScrollBarRenderer scrollBarRenderer;
-            ListViewRenderer listViewRenderer;
-            HeaderRenderer headerRenderer;
-            TreeViewRenderer treeViewRenderer;
-
             _renderers = new ThemeRenderer[]
             {
-                scrollBarRenderer = new ScrollBarRenderer(),
-                listViewRenderer = new ListViewRenderer(),
-                headerRenderer = new HeaderRenderer(),
-                treeViewRenderer = new TreeViewRenderer(),
+                _scrollBarRenderer = new ScrollBarRenderer(),
+                _listViewRenderer = new ListViewRenderer(),
+                _headerRenderer = new HeaderRenderer(),
+                _treeViewRenderer = new TreeViewRenderer(),
                 new EditRenderer(),
                 new SpinRenderer(),
                 new ComboBoxRenderer(),
@@ -124,14 +123,30 @@ namespace GitUI.Theming
                 new TooltipRenderer(),
             };
 
+            LoadThemeData();
+        }
+
+        public static void LoadThemeData()
+        {
+            Validates.NotNull(_renderers);
+            Validates.NotNull(_scrollBarRenderer);
+            Validates.NotNull(_headerRenderer);
+            Validates.NotNull(_listViewRenderer);
+            Validates.NotNull(_treeViewRenderer);
+
+            foreach (ThemeRenderer renderer in _renderers)
+            {
+                renderer.AddThemeData(IntPtr.Zero);
+            }
+
             var editorHandle = new ICSharpCode.TextEditor.TextEditorControl().Handle;
             var listViewHandle = new NativeListView().Handle;
             var treeViewHandle = new NativeTreeView().Handle;
-            scrollBarRenderer.AddThemeData(editorHandle);
-            scrollBarRenderer.AddThemeData(listViewHandle);
-            headerRenderer.AddThemeData(listViewHandle);
-            listViewRenderer.AddThemeData(listViewHandle);
-            treeViewRenderer.AddThemeData(treeViewHandle);
+            _scrollBarRenderer.AddThemeData(editorHandle);
+            _scrollBarRenderer.AddThemeData(listViewHandle);
+            _headerRenderer.AddThemeData(listViewHandle);
+            _listViewRenderer.AddThemeData(listViewHandle);
+            _treeViewRenderer.AddThemeData(treeViewHandle);
         }
 
         public static void Uninstall()
@@ -185,14 +200,14 @@ namespace GitUI.Theming
             if (!BypassAnyHook)
             {
                 var name = Win32ColorTranslator.GetKnownColor(nindex);
-                var color = _theme.GetColor(name);
+                var color = _theme!.GetColor(name);
                 if (color != Color.Empty)
                 {
                     return ColorTranslator.ToWin32(color);
                 }
             }
 
-            return _getSysColorBypass(nindex);
+            return _getSysColorBypass!(nindex);
         }
 
         private static IntPtr GetSysColorBrushHook(int nindex)
@@ -200,7 +215,7 @@ namespace GitUI.Theming
             if (!BypassAnyHook)
             {
                 var name = Win32ColorTranslator.GetKnownColor(nindex);
-                var color = _theme.GetColor(name);
+                var color = _theme!.GetColor(name);
                 if (color != Color.Empty)
                 {
                     int colorref = ColorTranslator.ToWin32(color);
@@ -209,7 +224,7 @@ namespace GitUI.Theming
                 }
             }
 
-            return _getSysColorBrushBypass(nindex);
+            return _getSysColorBrushBypass!(nindex);
         }
 
         private static int DrawThemeBackgroundHook(
@@ -226,7 +241,7 @@ namespace GitUI.Theming
                 }
             }
 
-            return _drawThemeBackgroundBypass(htheme, hdc, partid, stateid, prect, pcliprect);
+            return _drawThemeBackgroundBypass!(htheme, hdc, partid, stateid, prect, pcliprect);
         }
 
         private static int DrawThemeBackgroundExHook(
@@ -248,7 +263,7 @@ namespace GitUI.Theming
                 }
             }
 
-            return _drawThemeBackgroundExBypass(htheme, hdc, partid, stateid, prect, ref poptions);
+            return _drawThemeBackgroundExBypass!(htheme, hdc, partid, stateid, prect, ref poptions);
         }
 
         private static int GetThemeColorHook(IntPtr htheme, int ipartid, int istateid, int ipropid,
@@ -263,7 +278,7 @@ namespace GitUI.Theming
                 }
             }
 
-            return _getThemeColorBypass(htheme, ipartid, istateid, ipropid, out pcolor);
+            return _getThemeColorBypass!(htheme, ipartid, istateid, ipropid, out pcolor);
         }
 
         private static int DrawThemeTextHook(
@@ -277,12 +292,12 @@ namespace GitUI.Theming
                 var renderer = _renderers.FirstOrDefault(_ => _.Supports(htheme));
                 if (renderer is not null && renderer.ForceUseRenderTextEx)
                 {
-                    NativeMethods.DTTOPTS poptions = new NativeMethods.DTTOPTS
+                    NativeMethods.DTTOPTS poptions = new()
                     {
                         dwSize = Marshal.SizeOf<NativeMethods.DTTOPTS>()
                     };
 
-                    return _drawThemeTextExBypass(
+                    return _drawThemeTextExBypass!(
                         htheme, hdc,
                         partid, stateid,
                         psztext, cchtext, dwtextflags,
@@ -290,7 +305,7 @@ namespace GitUI.Theming
                 }
             }
 
-            return _drawThemeTextBypass(
+            return _drawThemeTextBypass!(
                 htheme, hdc,
                 partid, stateid,
                 psztext, cchtext,
@@ -318,7 +333,7 @@ namespace GitUI.Theming
                 }
             }
 
-            return _drawThemeTextExBypass(
+            return _drawThemeTextExBypass!(
                 htheme, hdc,
                 partid, stateid,
                 psztext, cchtext,
@@ -331,7 +346,7 @@ namespace GitUI.Theming
             int x, int y, int nwidth, int nheight,
             IntPtr hwndparent, IntPtr hmenu, IntPtr hinstance, IntPtr lpparam)
         {
-            var hwnd = _createWindowExBypass(
+            var hwnd = _createWindowExBypass!(
                 dwexstyle, lpclassname, lpwindowname, dwstyle,
                 x, y, nwidth, nheight,
                 hwndparent, hmenu, hinstance, lpparam);

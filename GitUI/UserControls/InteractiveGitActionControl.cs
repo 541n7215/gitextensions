@@ -12,14 +12,14 @@ namespace GitUI.UserControls
 {
     public partial class InteractiveGitActionControl : GitModuleControl
     {
-        private readonly TranslationString _progressMessage = new TranslationString("{0} is currently in progress.");
-        private readonly TranslationString _conflictsMessage = new TranslationString("There are unresolved merge conflicts.");
-        private readonly TranslationString _progressWithConflictsMessage = new TranslationString("{0} is currently in progress with merge conflicts.");
+        private readonly TranslationString _progressMessage = new("{0} is currently in progress.");
+        private readonly TranslationString _conflictsMessage = new("There are unresolved merge conflicts.");
+        private readonly TranslationString _progressWithConflictsMessage = new("{0} is currently in progress with merge conflicts.");
 
-        private readonly TranslationString _bisect = new TranslationString("Bisect");
-        private readonly TranslationString _rebase = new TranslationString("Rebase");
-        private readonly TranslationString _merge = new TranslationString("Merge");
-        private readonly TranslationString _patch = new TranslationString("Patch");
+        private readonly TranslationString _bisect = new("Bisect");
+        private readonly TranslationString _rebase = new("Rebase");
+        private readonly TranslationString _merge = new("Merge");
+        private readonly TranslationString _patch = new("Patch");
 
         public enum GitAction
         {
@@ -34,7 +34,7 @@ namespace GitUI.UserControls
         private GitAction _action;
         private bool _hasConflicts;
 
-        private GitModuleForm Form => FindForm() as GitModuleForm;
+        private GitModuleForm? Form => FindForm() as GitModuleForm;
 
         public InteractiveGitActionControl()
         {
@@ -236,7 +236,7 @@ namespace GitUI.UserControls
             switch (_action)
             {
                 case GitAction.Bisect:
-                    if (Form is not FormBrowse)
+                    if (Form is not FormBrowse || Form.RevisionGridControl is null)
                     {
                         return;
                     }
@@ -258,7 +258,7 @@ namespace GitUI.UserControls
         }
 
         internal TestAccessor GetTestAccessor()
-            => new TestAccessor(this);
+            => new(this);
 
         internal readonly struct TestAccessor
         {

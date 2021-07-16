@@ -8,18 +8,19 @@ using System.Windows.Forms;
 using Git.hub;
 using GitCommands.Config;
 using GitCommands.Remotes;
-using GitHub3.Properties;
+using GitExtensions.Plugins.GitHub3.Properties;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.RepositoryHosts;
+using Microsoft;
 using ResourceManager;
 
-namespace GitHub3
+namespace GitExtensions.Plugins.GitHub3
 {
     internal static class GitHubLoginInfo
     {
-        private static string _username;
+        private static string? _username;
 
-        public static string Username
+        public static string? Username
         {
             get
             {
@@ -57,11 +58,11 @@ namespace GitHub3
 
         public static string OAuthToken
         {
-            get => GitHub3Plugin.Instance.OAuthToken.ValueOrDefault(GitHub3Plugin.Instance.Settings);
+            get => GitHub3Plugin.Instance.PersonalAccessToken.ValueOrDefault(GitHub3Plugin.Instance.Settings);
             set
             {
                 _username = null;
-                GitHub3Plugin.Instance.OAuthToken[GitHub3Plugin.Instance.Settings] = value;
+                GitHub3Plugin.Instance.PersonalAccessToken[GitHub3Plugin.Instance.Settings] = value;
                 GitHub3Plugin.GitHub.setOAuth2Token(value);
             }
         }
@@ -70,39 +71,76 @@ namespace GitHub3
     [Export(typeof(IGitPlugin))]
     public class GitHub3Plugin : GitPluginBase, IRepositoryHostPlugin
     {
-        private readonly TranslationString _viewInWebSite = new TranslationString("View in {0}");
-        private readonly TranslationString _tokenAlreadyExist = new TranslationString("You already have an OAuth token. To get a new one, delete your old one in Plugins > Settings first.");
+        private readonly TranslationString _viewInWebSite = new("View in {0}");
+        private readonly TranslationString _tokenAlreadyExist = new("You already have an personal access token. To get a new one, delete your old one in Plugins > Plugin Settings first.");
+        private readonly TranslationString _generateToken = new("Generate a GitHub personal access token");
+        private readonly TranslationString _manageToken = new("Manage GitHub personal access token");
+        private readonly TranslationString _openLinkFailed = new("Fail to open the link. Reason: ");
 
         public static string GitHubAuthorizationRelativeUrl = "authorizations";
         public static string UpstreamConventionName = "upstream";
-        public readonly StringSetting GitHubHost = new StringSetting("GitHub (Enterprise) hostname", "github.com");
-        public readonly StringSetting OAuthToken = new StringSetting("OAuth Token", "");
+        public readonly StringSetting GitHubHost = new("GitHub (Enterprise) hostname", "github.com");
+        public readonly StringSetting PersonalAccessToken = new("OAuth Token", "Personal Access Token", "");
         public string GitHubApiEndpoint => $"https://api.{GitHubHost.ValueOrDefault(Settings)}";
         public string GitHubEndpoint => $"https://{GitHubHost.ValueOrDefault(Settings)}";
 
-        internal static GitHub3Plugin Instance;
-        internal static Client _gitHub;
-        internal static Client GitHub => _gitHub ?? (_gitHub = new Client(Instance.GitHubApiEndpoint));
+        internal static GitHub3Plugin Instance = null!;
+        internal static Client? _gitHub;
+        internal static Client GitHub => _gitHub ??= new(Instance.GitHubApiEndpoint);
 
-        private IGitUICommands _currentGitUiCommands;
-        private IReadOnlyList<IHostedRemote> _hostedRemotesForModule;
+        private IGitUICommands? _currentGitUiCommands;
+        private IReadOnlyList<IHostedRemote>? _hostedRemotesForModule;
 
         public GitHub3Plugin() : base(true)
         {
-            SetNameAndDescription("GitHub");
+            Id = new Guid("2EC3E1F0-EF37-413F-BEA5-B8FE1F9C505C");
+            Name = "GitHub";
             Translate();
 
-            if (Instance is null)
-            {
-                Instance = this;
-            }
+            Instance ??= this;
 
             Icon = Resources.IconGitHub;
         }
 
         public override IEnumerable<ISetting> GetSettings()
         {
-            yield return OAuthToken;
+            yield return PersonalAccessToken;
+
+            LinkLabel generateTokenLink = new() { Text = _generateToken.Text };
+            generateTokenLink.Click += GenerateTokenLink_Click;
+            yield return new PseudoSetting(generateTokenLink);
+
+            LinkLabel manageTokenLink = new() { Text = _manageToken.Text };
+            manageTokenLink.Click += ManageTokenLink_Click;
+            yield return new PseudoSetting(manageTokenLink);
+        }
+
+        private void GenerateTokenLink_Click(object sender, EventArgs e)
+        {
+            OpenLink($"https://{GitHubHost.ValueOrDefault(Instance.Settings)}/settings/tokens/new?description=Token%20for%20GitExtensions&scopes=repo,public_repo");
+        }
+
+        private void ManageTokenLink_Click(object sender, EventArgs e)
+        {
+            OpenLink($"https://{GitHubHost.ValueOrDefault(Instance.Settings)}/settings/tokens");
+        }
+
+        private void OpenLink(string url)
+        {
+            try
+            {
+                ProcessStartInfo psi = new(url)
+                {
+                    UseShellExecute = true,
+                    Verb = "open"
+                };
+
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(_openLinkFailed.Text + ex.Message);
+            }
         }
 
         public override void Register(IGitUICommands gitUiCommands)
@@ -118,10 +156,7 @@ namespace GitHub3
         {
             if (string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken))
             {
-                var authorizationApiUrl = new Uri(new Uri(GitHubApiEndpoint), GitHubAuthorizationRelativeUrl).ToString();
-                using var gitHubCredentialsPrompt = new GitHubCredentialsPrompt(authorizationApiUrl);
-
-                gitHubCredentialsPrompt.ShowDialog(args.OwnerForm);
+                args.GitUICommands.StartSettingsDialog(this);
             }
             else
             {
@@ -155,10 +190,12 @@ namespace GitHub3
 
         public bool ConfigurationOk => !string.IsNullOrEmpty(GitHubLoginInfo.OAuthToken);
 
-        public string OwnerLogin => GitHub.getCurrentUser()?.Login;
+        public string? OwnerLogin => GitHub.getCurrentUser()?.Login;
 
-        public async Task<string> AddUpstreamRemoteAsync()
+        public async Task<string?> AddUpstreamRemoteAsync()
         {
+            Validates.NotNull(_currentGitUiCommands);
+
             var gitModule = _currentGitUiCommands.GitModule;
             var hostedRemote = GetHostedRemotesForModule().FirstOrDefault(r => r.IsOwnedByMe);
             if (hostedRemote is null)
@@ -201,7 +238,7 @@ namespace GitHub3
 
             IEnumerable<IHostedRemote> Remotes()
             {
-                var set = new HashSet<IHostedRemote>();
+                HashSet<IHostedRemote> set = new();
 
                 foreach (string remote in gitModule.GetRemoteNames())
                 {
@@ -214,7 +251,7 @@ namespace GitHub3
 
                     if (new GitHubRemoteParser().TryExtractGitHubDataFromRemoteUrl(url, out var owner, out var repository))
                     {
-                        var hostedRemote = new GitHubHostedRemote(remote, owner, repository, url);
+                        GitHubHostedRemote hostedRemote = new(remote, owner, repository, url);
 
                         if (set.Add(hostedRemote))
                         {
@@ -233,7 +270,7 @@ namespace GitHub3
                 return;
             }
 
-            var toolStripMenuItem = new ToolStripMenuItem(string.Format(_viewInWebSite.Text, Name), Icon);
+            ToolStripMenuItem toolStripMenuItem = new(string.Format(_viewInWebSite.Text, Name), Icon);
             contextMenu.Items.Add(toolStripMenuItem);
             toolStripMenuItem.Click += (s, e) => Process.Start(_hostedRemotesForModule.First().Data);
 
@@ -242,14 +279,14 @@ namespace GitHub3
                 ToolStripItem toolStripItem = toolStripMenuItem.DropDownItems.Add(hostedRemote.DisplayData);
                 toolStripItem.Click += (s, e) =>
                 {
-                    var blameContext = contextMenu?.Tag as GitBlameContext;
-                    if (blameContext is null)
+                    if (contextMenu.Tag is GitBlameContext blameContext)
                     {
-                        return;
+                        Process.Start(
+                            hostedRemote.GetBlameUrl(
+                                blameContext.BlameId.ToString(),
+                                blameContext.FileName,
+                                blameContext.LineIndex + 1));
                     }
-
-                    Process.Start(hostedRemote.GetBlameUrl(blameContext.BlameId.ToString(), blameContext.FileName,
-                        blameContext.LineIndex + 1));
                 };
             }
         }

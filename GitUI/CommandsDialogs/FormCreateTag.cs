@@ -7,31 +7,32 @@ using GitCommands.Git.Tag;
 using GitUI.HelperDialogs;
 using GitUI.Script;
 using GitUIPluginInterfaces;
-using JetBrains.Annotations;
 using ResourceManager;
 
 namespace GitUI.CommandsDialogs
 {
     public sealed partial class FormCreateTag : GitModuleForm
     {
-        private readonly TranslationString _messageCaption = new TranslationString("Tag");
-        private readonly TranslationString _noRevisionSelected = new TranslationString("Select 1 revision to create the tag on.");
-        private readonly TranslationString _pushToCaption = new TranslationString("Push tag to '{0}'");
-        private static readonly TranslationString _trsLightweight = new TranslationString("Lightweight tag");
-        private static readonly TranslationString _trsAnnotated = new TranslationString("Annotated tag");
-        private static readonly TranslationString _trsSignDefault = new TranslationString("Sign with default GPG");
-        private static readonly TranslationString _trsSignSpecificKey = new TranslationString("Sign with specific GPG");
+        private readonly TranslationString _messageCaption = new("Tag");
+        private readonly TranslationString _noRevisionSelected = new("Select 1 revision to create the tag on.");
+        private readonly TranslationString _pushToCaption = new("Push tag to '{0}'");
+        private static readonly TranslationString _trsLightweight = new("Lightweight tag");
+        private static readonly TranslationString _trsAnnotated = new("Annotated tag");
+        private static readonly TranslationString _trsSignDefault = new("Sign with default GPG");
+        private static readonly TranslationString _trsSignSpecificKey = new("Sign with specific GPG");
 
         private readonly IGitTagController _gitTagController;
         private string _currentRemote = "";
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormCreateTag()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
 
-        public FormCreateTag([NotNull] GitUICommands commands, [CanBeNull] ObjectId objectId)
+        public FormCreateTag(GitUICommands commands, ObjectId? objectId)
             : base(commands)
         {
             InitializeComponent();
@@ -81,7 +82,7 @@ namespace GitUI.CommandsDialogs
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, ex.Message, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -95,7 +96,7 @@ namespace GitUI.CommandsDialogs
                 return "";
             }
 
-            var createTagArgs = new GitCreateTagArgs(textBoxTagName.Text,
+            GitCreateTagArgs createTagArgs = new(textBoxTagName.Text,
                                                      objectId,
                                                      GetSelectedOperation(annotate.SelectedIndex),
                                                      tagMessage.Text,
@@ -115,20 +116,22 @@ namespace GitUI.CommandsDialogs
         {
             var pushCmd = GitCommandHelpers.PushTagCmd(_currentRemote, tagName, false);
 
-            ScriptManager.RunEventScripts(this, ScriptEvent.BeforePush);
+            bool success = ScriptManager.RunEventScripts(this, ScriptEvent.BeforePush);
+            if (!success)
+            {
+                return;
+            }
 
-            using (var form = new FormRemoteProcess(UICommands, process: null, pushCmd)
+            using FormRemoteProcess form = new(UICommands, process: null, pushCmd)
             {
                 Remote = _currentRemote,
                 Text = string.Format(_pushToCaption.Text, _currentRemote),
-            })
-            {
-                form.ShowDialog();
+            };
+            form.ShowDialog();
 
-                if (!Module.InTheMiddleOfAction() && !form.ErrorOccurred())
-                {
-                    ScriptManager.RunEventScripts(this, ScriptEvent.AfterPush);
-                }
+            if (!Module.InTheMiddleOfAction() && !form.ErrorOccurred())
+            {
+                ScriptManager.RunEventScripts(this, ScriptEvent.AfterPush);
             }
         }
 
@@ -144,19 +147,14 @@ namespace GitUI.CommandsDialogs
 
         private static TagOperation GetSelectedOperation(int dropdownSelection)
         {
-            switch (dropdownSelection)
+            return dropdownSelection switch
             {
-                case 0:
-                    return TagOperation.Lightweight;
-                case 1:
-                    return TagOperation.Annotate;
-                case 2:
-                    return TagOperation.SignWithDefaultKey;
-                case 3:
-                    return TagOperation.SignWithSpecificKey;
-                default:
-                    throw new NotSupportedException("Invalid dropdownSelection");
-            }
+                0 => TagOperation.Lightweight,
+                1 => TagOperation.Annotate,
+                2 => TagOperation.SignWithDefaultKey,
+                3 => TagOperation.SignWithSpecificKey,
+                _ => throw new NotSupportedException("Invalid dropdownSelection")
+            };
         }
     }
 }

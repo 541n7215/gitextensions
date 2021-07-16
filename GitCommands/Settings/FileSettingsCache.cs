@@ -12,7 +12,7 @@ namespace GitCommands.Settings
         private DateTime? _lastFileRead;
         private DateTime _lastFileModificationDate = DateTime.MaxValue;
         private DateTime? _lastModificationDate;
-        private readonly FileSystemWatcher _fileWatcher = new FileSystemWatcher();
+        private readonly FileSystemWatcher _fileWatcher = new();
         private readonly bool _canEnableFileWatcher;
 
         private Timer? _saveTimer;
@@ -35,18 +35,9 @@ namespace GitCommands.Settings
             _fileWatcher.Changed += _fileWatcher_Changed;
             _fileWatcher.Renamed += _fileWatcher_Renamed;
             _fileWatcher.Created += _fileWatcher_Created;
-            string? dir;
-            try
-            {
-                dir = Path.GetDirectoryName(SettingsFilePath);
-            }
-            catch (ArgumentException)
-            {
-                // Illegal characters in the filename
-                dir = null;
-            }
 
-            if (Directory.Exists(dir))
+            string? dir = Path.GetDirectoryName(SettingsFilePath);
+            if (Directory.Exists(dir) && File.Exists(SettingsFilePath))
             {
                 _fileWatcher.Path = dir;
                 _fileWatcher.Filter = Path.GetFileName(SettingsFilePath);
@@ -68,8 +59,6 @@ namespace GitCommands.Settings
             FileChanged();
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "SaveTimer", Justification = "SaveTimer is disposed inside lambda but Code Analysis could not determine that")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_fileWatcher", Justification = "_fileWtcher is disposed inside lambda but Code Analysis could not determine that")]
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -240,7 +229,7 @@ namespace GitCommands.Settings
         private void StartSaveTimer()
         {
             // Resets timer so that the last call will let the timer event run and will cause the settings to be saved.
-            if (_saveTimer != null)
+            if (_saveTimer is not null)
             {
                 _saveTimer.Stop();
                 _saveTimer.AutoReset = true;
@@ -252,7 +241,7 @@ namespace GitCommands.Settings
         }
 
         internal TestAccessor GetTestAccessor()
-            => new TestAccessor(this);
+            => new(this);
 
         internal readonly struct TestAccessor
         {

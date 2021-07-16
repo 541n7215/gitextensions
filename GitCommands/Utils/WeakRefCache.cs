@@ -8,10 +8,10 @@ namespace GitCommands.Utils
 {
     public class WeakRefCache : IDisposable
     {
-        private readonly Dictionary<string, WeakReference> _weakMap = new Dictionary<string, WeakReference>();
-        private readonly Timer _clearTimer = new Timer(60 * 1000);
+        private readonly Dictionary<string, WeakReference> _weakMap = new();
+        private readonly Timer _clearTimer = new(60 * 1000);
 
-        public static readonly WeakRefCache Default = new WeakRefCache();
+        public static readonly WeakRefCache Default = new();
 
         public WeakRefCache()
         {

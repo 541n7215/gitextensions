@@ -10,12 +10,14 @@ namespace GitUI.CommandsDialogs
 {
     public partial class FormRevertCommit : GitModuleForm
     {
-        private readonly TranslationString _noneParentSelectedText = new TranslationString("None parent is selected!");
+        private readonly TranslationString _noneParentSelectedText = new("None parent is selected!");
 
         private bool _isMerge;
 
         [Obsolete("For VS designer and translation test only. Do not remove.")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private FormRevertCommit()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -29,7 +31,7 @@ namespace GitUI.CommandsDialogs
             InitializeComplete();
         }
 
-        public GitRevision Revision { get; set; }
+        public GitRevision Revision { get; }
 
         private void FormRevertCommit_Load(object sender, EventArgs e)
         {
@@ -70,7 +72,7 @@ namespace GitUI.CommandsDialogs
             {
                 if (ParentsList.SelectedItems.Count != 1)
                 {
-                    MessageBox.Show(this, _noneParentSelectedText.Text, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(this, _noneParentSelectedText.Text, TranslatedStrings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 else

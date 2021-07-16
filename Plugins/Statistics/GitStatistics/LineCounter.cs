@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using GitCommands;
 
-namespace GitStatistics
+namespace GitExtensions.Plugins.GitStatistics
 {
     public sealed class LineCounter
     {
-        public event EventHandler Updated;
+        public event EventHandler? Updated;
 
         public int CommentLineCount { get; private set; }
         public int TotalLineCount { get; private set; }
@@ -54,18 +54,21 @@ namespace GitStatistics
             {
                 foreach (var file in filesToCheck)
                 {
-                    if (extensions.Contains(PathUtil.GetExtension(file)))
+                    FileInfo fileInfo = null;
+                    try
                     {
-                        FileInfo fileInfo;
-                        try
+                        if (extensions.Contains(Path.GetExtension(file)))
                         {
                             fileInfo = new FileInfo(file);
                         }
-                        catch
-                        {
-                            continue;
-                        }
+                    }
+                    catch
+                    {
+                        continue;
+                    }
 
+                    if (fileInfo is not null)
+                    {
                         yield return fileInfo;
                     }
                 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using GitCommands;
+using GitExtUtils;
 using GitUI.CommandsDialogs.AboutBoxDialog;
 using GitUI.CommandsDialogs.BrowseDialog;
 using GitUI.Properties;
@@ -12,8 +13,8 @@ namespace GitUI.CommandsDialogs
 {
     public sealed partial class FormAbout : GitExtensionsForm
     {
-        private readonly TranslationString _thanksToContributors = new TranslationString("Thanks to over {0:#,##0} contributors: ");
-        private readonly TranslationString _copyTooltip = new TranslationString("Copy environment info");
+        private readonly TranslationString _thanksToContributors = new("Thanks to over {0:#,##0} contributors: ");
+        private readonly TranslationString _copyTooltip = new("Copy environment info");
 
         public FormAbout()
         {
@@ -37,7 +38,7 @@ namespace GitUI.CommandsDialogs
             var contributorsList = GetContributorList();
             var thanksToContributorsText = string.Format(_thanksToContributors.Text, contributorsList.Count);
 
-            var random = new Random();
+            Random random = new();
 
             thanksTimer.Tick += delegate { ThankNextContributor(); };
             thanksTimer.Enabled = true;
@@ -50,10 +51,8 @@ namespace GitUI.CommandsDialogs
 
             void ShowContributorsForm()
             {
-                using (var formContributors = new FormContributors())
-                {
-                    formContributors.ShowDialog(owner: this);
-                }
+                using FormContributors formContributors = new();
+                formContributors.ShowDialog(owner: this);
             }
 
             void ThankNextContributor()
@@ -68,7 +67,7 @@ namespace GitUI.CommandsDialogs
             {
                 return new[] { Resources.Team, Resources.Coders, Resources.Translators, Resources.Designers }
                     .Select(c => c.Replace(Environment.NewLine, ""))
-                    .SelectMany(line => line.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries))
+                    .SelectMany(line => line.LazySplit(',', StringSplitOptions.RemoveEmptyEntries))
                     .Select(contributor => contributor.Trim())
                     .ToList();
             }

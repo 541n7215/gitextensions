@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -16,7 +17,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
     internal sealed class MessageColumnProvider : ColumnProvider
     {
         public const int MaxSuperprojectRefs = 4;
-        private readonly StringBuilder _toolTipBuilder = new StringBuilder(200);
+        private readonly StringBuilder _toolTipBuilder = new(200);
 
         private readonly Image _bisectGoodImage = DpiUtil.Scale(Images.BisectGood);
         private readonly Image _bisectBadImage = DpiUtil.Scale(Images.BisectBad);
@@ -44,9 +45,9 @@ namespace GitUI.UserControls.RevisionGrid.Columns
 
         public override void OnCellPainting(DataGridViewCellPaintingEventArgs e, GitRevision revision, int rowHeight, in CellStyle style)
         {
-            var indicator = new MultilineIndicator(e, revision);
+            MultilineIndicator indicator = new(e, revision);
             var messageBounds = indicator.RemainingCellBounds;
-            var superprojectRefs = new List<IGitRef>();
+            List<IGitRef> superprojectRefs = new();
             var offset = ColumnLeftMargin;
 
             if (_grid.TryGetSuperProjectInfo(out var spi))
@@ -57,7 +58,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
                 if (spi.Refs is not null && revision.ObjectId is not null &&
                     spi.Refs.TryGetValue(revision.ObjectId, out var refs))
                 {
-                    superprojectRefs.AddRange(refs.Where(RevisionGridControl.ShowRemoteRef));
+                    superprojectRefs.AddRange(refs);
                 }
             }
 
@@ -94,17 +95,19 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             }
         }
 
-        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, out string toolTip)
+        public override bool TryGetToolTip(DataGridViewCellMouseEventArgs e, GitRevision revision, [NotNullWhen(returnValue: true)] out string? toolTip)
         {
             _toolTipBuilder.Clear();
 
             if (!revision.IsArtificial && (revision.HasMultiLineMessage || revision.Refs.Count != 0))
             {
-                var bodySummary = _gitRevisionSummaryBuilder.BuildSummary(revision.Body);
-                var initialLength = (bodySummary?.Length ?? 50) + 10;
+                // The body is not stored for older commits (to save memory)
+                string bodySummary = _gitRevisionSummaryBuilder.BuildSummary(revision.Body)
+                    ?? revision.Subject + (revision.HasMultiLineMessage ? TranslatedStrings.BodyNotLoaded : "");
+                int initialLength = bodySummary.Length + 10;
                 _toolTipBuilder.EnsureCapacity(initialLength);
 
-                _toolTipBuilder.Append(bodySummary ?? revision.Subject + Strings.BodyNotLoaded);
+                _toolTipBuilder.Append(bodySummary);
 
                 if (revision.Refs.Count != 0)
                 {
@@ -118,11 +121,11 @@ namespace GitUI.UserControls.RevisionGrid.Columns
                     {
                         if (gitRef.IsBisectGood)
                         {
-                            _toolTipBuilder.AppendLine(Strings.MarkBisectAsGood);
+                            _toolTipBuilder.AppendLine(TranslatedStrings.MarkBisectAsGood);
                         }
                         else if (gitRef.IsBisectBad)
                         {
-                            _toolTipBuilder.AppendLine(Strings.MarkBisectAsBad);
+                            _toolTipBuilder.AppendLine(TranslatedStrings.MarkBisectAsBad);
                         }
                         else
                         {
@@ -168,12 +171,11 @@ namespace GitUI.UserControls.RevisionGrid.Columns
                 RefArrowType.None,
                 messageBounds,
                 e.Graphics,
-                dashedLine: false,
-                fill: true);
+                dashedLine: false);
 
             var max = Math.Max(
-                TextRenderer.MeasureText(ResourceManager.Strings.Workspace, style.NormalFont).Width,
-                TextRenderer.MeasureText(ResourceManager.Strings.Index, style.NormalFont).Width);
+                TextRenderer.MeasureText(ResourceManager.TranslatedStrings.Workspace, style.NormalFont).Width,
+                TextRenderer.MeasureText(ResourceManager.TranslatedStrings.Index, style.NormalFont).Width);
 
             offset = baseOffset + max + DpiUtil.Scale(6);
 
@@ -262,7 +264,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
         private void DrawRef(
             DataGridViewCellPaintingEventArgs e,
             IGitRef gitRef,
-            IGitRef superprojectRef,
+            IGitRef? superprojectRef,
             CellStyle style,
             Rectangle messageBounds,
             ref int offset)
@@ -312,8 +314,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
                 arrowType,
                 messageBounds,
                 e.Graphics,
-                dashedLine: superprojectRef is not null,
-                fill: true);
+                dashedLine: superprojectRef is not null);
         }
 
         private void DrawImage(
@@ -333,7 +334,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
 
         private void DrawArtificialCount(
             DataGridViewCellPaintingEventArgs e,
-            IReadOnlyList<GitItemStatus> items,
+            IReadOnlyList<GitItemStatus>? items,
             Image icon,
             in CellStyle style,
             Rectangle messageBounds,
@@ -347,7 +348,7 @@ namespace GitUI.UserControls.RevisionGrid.Columns
             var imageVerticalPadding = DpiUtil.Scale(6);
             var textHorizontalPadding = DpiUtil.Scale(4);
             var imageSize = e.CellBounds.Height - imageVerticalPadding - imageVerticalPadding;
-            var imageRect = new Rectangle(
+            Rectangle imageRect = new(
                 messageBounds.Left + offset,
                 e.CellBounds.Top + imageVerticalPadding,
                 imageSize,
@@ -360,11 +361,8 @@ namespace GitUI.UserControls.RevisionGrid.Columns
 
             var text = items.Count.ToString();
             var bounds = messageBounds.ReduceLeft(offset);
-            var color = e.State.HasFlag(DataGridViewElementStates.Selected)
-                ? SystemColors.HighlightText
-                : SystemColors.ControlText;
             var textWidth = Math.Max(
-                _grid.DrawColumnText(e, text, style.NormalFont, color, bounds),
+                _grid.DrawColumnText(e, text, style.NormalFont, style.ForeColor, bounds),
                 TextRenderer.MeasureText("88", style.NormalFont).Width);
             offset += textWidth + textHorizontalPadding;
         }
@@ -406,15 +404,13 @@ namespace GitUI.UserControls.RevisionGrid.Columns
                 return;
             }
 
-            if (lines.Length == 1)
+            if (lines.Length > 1 && AppSettings.ShowCommitBodyInRevisionGrid)
             {
-                return;
+                var commitBody = string.Concat(lines.Skip(1).Select(_ => " " + _));
+                var bodyBounds = messageBounds.ReduceLeft(offset);
+                var bodyWidth = _grid.DrawColumnText(e, commitBody, font, style.CommitBodyForeColor, bodyBounds);
+                offset += bodyWidth;
             }
-
-            var commitBody = string.Concat(lines.Skip(1).Select(_ => " " + _));
-            var bodyBounds = messageBounds.ReduceLeft(offset);
-            var bodyWidth = _grid.DrawColumnText(e, commitBody, font, style.CommitBodyForeColor, bodyBounds);
-            offset += bodyWidth;
 
             // Draw the multi-line indicator
             indicator.Render();
@@ -485,6 +481,6 @@ namespace GitUI.UserControls.RevisionGrid.Columns
         }
 
         private static string[] GetCommitMessageLines(GitRevision revision) =>
-            (revision.Body?.Trim() ?? revision.Subject ?? string.Empty).SplitLines();
+            (revision.Body?.Trim() ?? revision.Subject).Split(Delimiters.LineFeed, StringSplitOptions.RemoveEmptyEntries);
     }
 }

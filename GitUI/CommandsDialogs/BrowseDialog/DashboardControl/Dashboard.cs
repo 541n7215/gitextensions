@@ -14,18 +14,16 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
     [ThemeAware]
     public partial class Dashboard : GitModuleControl
     {
-        private readonly TranslationString _cloneFork = new TranslationString("Clone {0} repository");
-        private readonly TranslationString _cloneRepository = new TranslationString("Clone repository");
-        private readonly TranslationString _createRepository = new TranslationString("Create new repository");
-        private readonly TranslationString _develop = new TranslationString("Develop");
-        private readonly TranslationString _donate = new TranslationString("Donate");
-        private readonly TranslationString _issues = new TranslationString("Issues");
-        private readonly TranslationString _openRepository = new TranslationString("Open repository");
-        private readonly TranslationString _translate = new TranslationString("Translate");
+        private readonly TranslationString _cloneFork = new("Clone {0} repository");
+        private readonly TranslationString _cloneRepository = new("Clone repository");
+        private readonly TranslationString _createRepository = new("Create new repository");
+        private readonly TranslationString _develop = new("Develop");
+        private readonly TranslationString _donate = new("Donate");
+        private readonly TranslationString _issues = new("Issues");
+        private readonly TranslationString _openRepository = new("Open repository");
+        private readonly TranslationString _translate = new("Translate");
 
-        private DashboardTheme _selectedTheme;
-
-        public event EventHandler<GitModuleEventArgs> GitModuleChanged;
+        public event EventHandler<GitModuleEventArgs>? GitModuleChanged;
 
         public Dashboard()
         {
@@ -63,31 +61,32 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
 
         public void RefreshContent()
         {
+            DashboardTheme selectedTheme = ColorHelper.IsLightTheme() ? DashboardTheme.Light : DashboardTheme.Dark;
+
             InitDashboardLayout();
             ApplyTheme();
             userRepositoriesList.ShowRecentRepositories();
 
             void ApplyTheme()
             {
-                _selectedTheme = ColorHelper.IsLightTheme() ? DashboardTheme.Light : DashboardTheme.Dark;
-                BackgroundImage = _selectedTheme.BackgroundImage;
+                BackgroundImage = selectedTheme.BackgroundImage;
 
-                BackColor = _selectedTheme.Primary;
-                pnlLogo.BackColor = _selectedTheme.PrimaryVeryDark;
-                flpnlStart.BackColor = _selectedTheme.PrimaryLight;
-                flpnlContribute.BackColor = _selectedTheme.PrimaryVeryLight;
-                lblContribute.ForeColor = _selectedTheme.SecondaryHeadingText;
-                userRepositoriesList.BranchNameColor = _selectedTheme.SecondaryText;
-                userRepositoriesList.FavouriteColor = _selectedTheme.AccentedText;
-                userRepositoriesList.ForeColor = _selectedTheme.PrimaryText;
-                userRepositoriesList.HeaderColor = _selectedTheme.SecondaryHeadingText;
-                userRepositoriesList.HeaderBackColor = _selectedTheme.PrimaryDark;
-                userRepositoriesList.HoverColor = _selectedTheme.PrimaryLight;
-                userRepositoriesList.MainBackColor = _selectedTheme.Primary;
+                BackColor = selectedTheme.Primary;
+                pnlLogo.BackColor = selectedTheme.PrimaryVeryDark;
+                flpnlStart.BackColor = selectedTheme.PrimaryLight;
+                flpnlContribute.BackColor = selectedTheme.PrimaryVeryLight;
+                lblContribute.ForeColor = selectedTheme.SecondaryHeadingText;
+                userRepositoriesList.BranchNameColor = selectedTheme.SecondaryText;
+                userRepositoriesList.FavouriteColor = selectedTheme.AccentedText;
+                userRepositoriesList.ForeColor = selectedTheme.PrimaryText;
+                userRepositoriesList.HeaderColor = selectedTheme.SecondaryHeadingText;
+                userRepositoriesList.HeaderBackColor = selectedTheme.PrimaryDark;
+                userRepositoriesList.HoverColor = selectedTheme.PrimaryLight;
+                userRepositoriesList.MainBackColor = selectedTheme.Primary;
 
                 foreach (var item in flpnlContribute.Controls.OfType<LinkLabel>().Union(flpnlStart.Controls.OfType<LinkLabel>()))
                 {
-                    item.LinkColor = _selectedTheme.PrimaryText;
+                    item.LinkColor = selectedTheme.PrimaryText;
                 }
 
                 Invalidate(true);
@@ -127,7 +126,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
 
                             foreach (var gitHoster in PluginRegistry.GitHosters)
                             {
-                                lastControl = CreateLink(panel, string.Format(_cloneFork.Text, gitHoster.Description), Images.CloneRepoGitHub,
+                                lastControl = CreateLink(panel, string.Format(_cloneFork.Text, gitHoster.Name), Images.CloneRepoGitHub,
                                     (repoSender, eventArgs) => UICommands.StartCloneForkFromHoster(this, gitHoster, GitModuleChanged));
                             }
 
@@ -146,7 +145,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
                     AutoScrollMinSize = new Size(0, pnlLogo.Height + flpnlStart.MinimumSize.Height + flpnlContribute.MinimumSize.Height);
                 }
 
-                void AddLinks(Panel panel, Func<Panel, Control> addLinks, Action<Panel, Control> onLayout)
+                static void AddLinks(Panel panel, Func<Panel, Control> addLinks, Action<Panel, Control> onLayout)
                 {
                     panel.SuspendLayout();
                     panel.Controls.Clear();
@@ -163,7 +162,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
                 {
                     var padding24 = DpiUtil.Scale(24);
                     var padding3 = DpiUtil.Scale(3);
-                    var linkLabel = new LinkLabel
+                    LinkLabel linkLabel = new()
                     {
                         AutoSize = true,
                         AutoEllipsis = true,
@@ -177,13 +176,9 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
                         Text = text,
                         TextAlign = ContentAlignment.MiddleLeft
                     };
-                    linkLabel.MouseHover += (s, e) => linkLabel.LinkColor = _selectedTheme.AccentedText;
-                    linkLabel.MouseLeave += (s, e) => linkLabel.LinkColor = _selectedTheme.PrimaryText;
-
-                    if (handler is not null)
-                    {
-                        linkLabel.Click += handler;
-                    }
+                    linkLabel.MouseHover += (s, e) => linkLabel.LinkColor = selectedTheme.AccentedText;
+                    linkLabel.MouseLeave += (s, e) => linkLabel.LinkColor = selectedTheme.PrimaryText;
+                    linkLabel.Click += handler;
 
                     container.Controls.Add(linkLabel);
 
@@ -227,7 +222,7 @@ namespace GitUI.CommandsDialogs.BrowseDialog.DashboardControl
 
         private void openItem_Click(object sender, EventArgs e)
         {
-            GitModule module = FormOpenDirectory.OpenModule(this, currentModule: null);
+            GitModule? module = FormOpenDirectory.OpenModule(this, currentModule: null);
             if (module is not null)
             {
                 OnModuleChanged(this, new GitModuleEventArgs(module));

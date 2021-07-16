@@ -18,22 +18,22 @@ namespace GitUI.BranchTreePanel
     {
         private GitRefsSortOrderContextMenuItem _sortOrderContextMenuItem;
         private GitRefsSortByContextMenuItem _sortByContextMenuItem;
-        private ToolStripSeparator _tsmiSortMenuSpacer = new ToolStripSeparator { Name = "tsmiSortMenuSpacer" };
+        private ToolStripSeparator _tsmiSortMenuSpacer = new() { Name = "tsmiSortMenuSpacer" };
         private ToolStripItem[] _menuBranchCopyContextMenuItems = Array.Empty<ToolStripItem>();
         private ToolStripItem[] _menuRemoteCopyContextMenuItems = Array.Empty<ToolStripItem>();
 
         /// <summary>
-        /// Local branch context menu [git ref / rename / delete] actions
+        /// Local branch context menu [git ref / rename / delete] actions.
         /// </summary>
         private LocalBranchMenuItems<LocalBranchNode> _localBranchMenuItems;
 
         /// <summary>
-        /// Remote branch context menu [git ref / rename / delete] actions
+        /// Remote branch context menu [git ref / rename / delete] actions.
         /// </summary>
         private MenuItemsGenerator<RemoteBranchNode> _remoteBranchMenuItems;
 
         /// <summary>
-        /// Tags context menu [git ref] actions
+        /// Tags context menu [git ref] actions.
         /// </summary>
         private MenuItemsGenerator<TagNode> _tagNodeMenuItems;
 
@@ -45,13 +45,13 @@ namespace GitUI.BranchTreePanel
             //    Collapse All
             //    Expand All
 
-            Tree treeNode = (contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag as Tree;
+            Tree? treeNode = (contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag as Tree;
 
             if (contextMenu == menuMain)
             {
                 contextMenu.Items.Clear();
-                contextMenu.Items.Add(mnubtnCollapseAll);
-                contextMenu.Items.Add(mnubtnExpandAll);
+                contextMenu.Items.Add(mnubtnCollapse);
+                contextMenu.Items.Add(mnubtnExpand);
                 if (treeNode is not null)
                 {
                     AddMoveUpDownMenuItems();
@@ -65,14 +65,14 @@ namespace GitUI.BranchTreePanel
                 contextMenu.Items.Add(tsmiMainMenuSpacer1);
             }
 
-            if (!contextMenu.Items.Contains(mnubtnCollapseAll))
+            if (!contextMenu.Items.Contains(mnubtnExpand))
             {
-                contextMenu.Items.Add(mnubtnCollapseAll);
+                contextMenu.Items.Add(mnubtnExpand);
             }
 
-            if (!contextMenu.Items.Contains(mnubtnExpandAll))
+            if (!contextMenu.Items.Contains(mnubtnCollapse))
             {
-                contextMenu.Items.Add(mnubtnExpandAll);
+                contextMenu.Items.Add(mnubtnCollapse);
             }
 
             if (treeNode is not null)
@@ -111,9 +111,7 @@ namespace GitUI.BranchTreePanel
                 return;
             }
 
-            var node = (contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag as LocalBranchNode;
-
-            if (node is null)
+            if ((contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag is not LocalBranchNode node)
             {
                 return;
             }
@@ -140,9 +138,7 @@ namespace GitUI.BranchTreePanel
                 return;
             }
 
-            var node = (contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag as RemoteBranchNode;
-
-            if (node is null)
+            if ((contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag is not RemoteBranchNode node)
             {
                 return;
             }
@@ -157,8 +153,7 @@ namespace GitUI.BranchTreePanel
                 return;
             }
 
-            var node = (contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag as RemoteRepoNode;
-            if (node is null)
+            if ((contextMenu.SourceControl as TreeView)?.SelectedNode?.Tag is not RemoteRepoNode node)
             {
                 return;
             }
@@ -209,7 +204,7 @@ namespace GitUI.BranchTreePanel
 
         private void ContextMenuSubmoduleSpecific(ContextMenuStrip contextMenu)
         {
-            TreeNode selectedNode = (contextMenu.SourceControl as TreeView)?.SelectedNode;
+            TreeNode? selectedNode = (contextMenu.SourceControl as TreeView)?.SelectedNode;
             if (selectedNode is null)
             {
                 return;
@@ -281,8 +276,8 @@ namespace GitUI.BranchTreePanel
             _tagNodeMenuItems = new TagMenuItems<TagNode>(this);
             AddContextMenuItems(menuTag, _tagNodeMenuItems.Select(s => s.Item));
 
-            RegisterClick(mnubtnCollapseAll, () => treeMain.CollapseAll());
-            RegisterClick(mnubtnExpandAll, () => treeMain.ExpandAll());
+            RegisterClick(mnubtnCollapse, () => treeMain.SelectedNode?.Collapse());
+            RegisterClick(mnubtnExpand, () => treeMain.SelectedNode?.ExpandAll());
             RegisterClick(mnubtnMoveUp, () => ReorderTreeNode(treeMain.SelectedNode, up: true));
             RegisterClick(mnubtnMoveDown, () => ReorderTreeNode(treeMain.SelectedNode, up: false));
 
@@ -331,7 +326,7 @@ namespace GitUI.BranchTreePanel
 
         private ToolStripItem[] CreateCopyContextMenuItems()
         {
-            var copyContextMenuItem = new CopyContextMenuItem();
+            CopyContextMenuItem copyContextMenuItem = new();
 
             copyContextMenuItem.SetRevisionFunc(() => _scriptHost.GetSelectedRevisions());
 
@@ -349,8 +344,7 @@ namespace GitUI.BranchTreePanel
 
         private void contextMenu_Opening(object sender, CancelEventArgs e)
         {
-            var contextMenu = sender as ContextMenuStrip;
-            if (contextMenu is null)
+            if (sender is not ContextMenuStrip contextMenu)
             {
                 return;
             }
@@ -368,11 +362,11 @@ namespace GitUI.BranchTreePanel
         }
 
         /// <inheritdoc />
-        public TMenuItem CreateMenuItem<TMenuItem, TNode>(Action<TNode> onClick, TranslationString text, TranslationString toolTip, Bitmap icon = null)
+        public TMenuItem CreateMenuItem<TMenuItem, TNode>(Action<TNode> onClick, TranslationString text, TranslationString toolTip, Bitmap? icon = null)
             where TMenuItem : ToolStripItem, new()
             where TNode : class, INode
         {
-            var result = new TMenuItem();
+            TMenuItem result = new();
             result.Image = icon;
             result.Text = text.Text;
             result.ToolTipText = toolTip.Text;
@@ -380,7 +374,7 @@ namespace GitUI.BranchTreePanel
             return result;
         }
 
-        private void AddContextMenuItems(ContextMenuStrip menu, IEnumerable<ToolStripItem> items, ToolStripItem insertBefore = null, ToolStripItem insertAfter = null)
+        private void AddContextMenuItems(ContextMenuStrip menu, IEnumerable<ToolStripItem> items, ToolStripItem? insertBefore = null, ToolStripItem? insertAfter = null)
         {
             Debug.Assert(!(insertAfter is not null && insertBefore is not null), $"Only {nameof(insertBefore)} or {nameof(insertAfter)} is allowed.");
 

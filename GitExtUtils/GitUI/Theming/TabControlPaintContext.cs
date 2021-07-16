@@ -20,13 +20,15 @@ namespace GitExtUtils.GitUI.Theming
         private readonly Image?[] _tabImages;
         private readonly Rectangle[] _tabRects;
         private readonly string[] _tabTexts;
-        private readonly Color[] _tabBackColors;
         private readonly Size _size;
         private readonly bool _failed;
 
-        private static int ImagePadding { get; } = DpiUtil.Scale(6);
-        private static int SelectedTabPadding { get; } = DpiUtil.Scale(2);
-        private static int BorderWidth { get; } = DpiUtil.Scale(1);
+        private static readonly int ImagePadding = DpiUtil.Scale(6);
+
+        // DPI 100% - 175%: 2; DPI 200%: 4
+        // so that when leftmost tab is selected, its border matches the border of tab control
+        private static readonly int SelectedTabPadding = 2 * (int)Math.Floor(DpiUtil.ScaleX);
+        private const int BorderWidth = 1;
 
         public TabControlPaintContext(TabControl tabs, PaintEventArgs e)
         {
@@ -34,7 +36,7 @@ namespace GitExtUtils.GitUI.Theming
             _graphics = e.Graphics;
             _clipRectangle = e.ClipRectangle;
             _size = tabs.Size;
-            _parentBackColor = tabs.Parent.BackColor;
+            _parentBackColor = GetParentBackColor(tabs);
             _selectedIndex = tabs.SelectedIndex;
             _tabCount = tabs.TabCount;
             _font = tabs.Font;
@@ -52,9 +54,6 @@ namespace GitExtUtils.GitUI.Theming
                 _tabRects = Enumerable.Range(0, _tabCount)
                     .Select(tabs.GetTabRect)
                     .ToArray();
-                _tabBackColors = Enumerable.Range(0, _tabCount)
-                    .Select(i => tabs.TabPages[i].BackColor)
-                    .ToArray();
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -68,7 +67,6 @@ namespace GitExtUtils.GitUI.Theming
                 _tabTexts = null!;
                 _tabImages = null!;
                 _tabRects = null!;
-                _tabBackColors = null!;
             }
         }
 
@@ -79,7 +77,7 @@ namespace GitExtUtils.GitUI.Theming
                 return;
             }
 
-            using var canvasBrush = new SolidBrush(_parentBackColor);
+            using SolidBrush canvasBrush = new(_parentBackColor);
             _graphics.FillRectangle(canvasBrush, _clipRectangle);
 
             RenderSelectedPageBackground();
@@ -106,11 +104,11 @@ namespace GitExtUtils.GitUI.Theming
 
         private void RenderTabBackground(int index)
         {
-            using var borderPen = GetBorderPen();
+            using var borderPen = CreateBorderPen();
             var outerRect = GetOuterTabRect(index);
             _graphics.FillRectangle(GetBackgroundBrush(index), outerRect);
 
-            var points = new List<Point>(4);
+            List<Point> points = new(4);
             if (index <= _selectedIndex)
             {
                 points.Add(new Point(outerRect.Left, outerRect.Bottom - 1));
@@ -143,7 +141,7 @@ namespace GitExtUtils.GitUI.Theming
         {
             var innerRect = _tabRects[index];
             int imgHeight = _imageSize.Height;
-            var imgRect = new Rectangle(
+            Rectangle imgRect = new(
                 new Point(innerRect.X + ImagePadding,
                     innerRect.Y + ((innerRect.Height - imgHeight) / 2)),
                 _imageSize);
@@ -265,29 +263,42 @@ namespace GitExtUtils.GitUI.Theming
             }
 
             _graphics.FillRectangle(GetBackgroundBrush(_selectedIndex), pageRect);
-            using var borderPen = GetBorderPen();
+            using var borderPen = CreateBorderPen();
             {
                 _graphics.DrawRectangle(borderPen, pageRect);
             }
+        }
+
+        private Color GetParentBackColor(TabControl tabs)
+        {
+            var parent = tabs.Parent;
+            while (parent is not null)
+            {
+                if (parent.BackColor != Color.Transparent)
+                {
+                    return parent.BackColor;
+                }
+
+                parent = parent.Parent;
+            }
+
+            return SystemColors.Window;
         }
 
         private Brush GetBackgroundBrush(int index)
         {
             if (index == _selectedIndex)
             {
-                return _tabBackColors[index] == Color.Transparent
-                    ? SystemBrushes.Window
-                    : new SolidBrush(_tabBackColors[index]);
+                return SystemBrushes.Window;
             }
 
             bool isHighlighted = _tabRects[index].Contains(_mouseCursor);
-
             return isHighlighted
-                ? SystemBrushes.ControlLightLight
+                ? new SolidBrush(ColorHelper.Lerp(SystemColors.Control, SystemColors.HotTrack, 64f / 255f))
                 : SystemBrushes.Control;
         }
 
-        private Pen GetBorderPen() =>
-            new Pen(SystemBrushes.ControlDark, BorderWidth);
+        private Pen CreateBorderPen() =>
+            new(Color.LightGray.AdaptBackColor(), BorderWidth);
     }
 }

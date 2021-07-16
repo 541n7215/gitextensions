@@ -73,11 +73,11 @@ namespace GitExtUtils.GitUI.Theming
             KnownColor highlightColorName,
             float degreeOfGrayness = 1f)
         {
-            var grayTextHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(KnownColor.GrayText));
-            var textHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(textColorName));
-            var highlightTextHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(KnownColor.HighlightText));
-            var backgroundHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(backgroundColorName));
-            var highlightBackgroundHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(highlightColorName));
+            HslColor grayTextHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(KnownColor.GrayText));
+            HslColor textHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(textColorName));
+            HslColor highlightTextHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(KnownColor.HighlightText));
+            HslColor backgroundHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(backgroundColorName));
+            HslColor highlightBackgroundHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(highlightColorName));
 
             double grayTextL = textHsl.L + (degreeOfGrayness * (grayTextHsl.L - textHsl.L));
 
@@ -96,8 +96,8 @@ namespace GitExtUtils.GitUI.Theming
         /// </summary>
         public static Color GetGrayTextColor(KnownColor textColorName, float degreeOfGrayness = 1f)
         {
-            var grayTextHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(KnownColor.GrayText));
-            var textHsl = new HslColor(ThemeSettings.InvariantTheme.GetNonEmptyColor(textColorName));
+            HslColor grayTextHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(KnownColor.GrayText));
+            HslColor textHsl = new(ThemeSettings.InvariantTheme.GetNonEmptyColor(textColorName));
 
             double grayTextL = textHsl.L + (degreeOfGrayness * (grayTextHsl.L - textHsl.L));
             var highlightGrayTextHsl = grayTextHsl.WithLuminosity(grayTextL);
@@ -247,8 +247,8 @@ namespace GitExtUtils.GitUI.Theming
             Func<double, double>? s = null,
             Func<double, double>? l = null)
         {
-            var hsl = new HslColor(c);
-            var transformed = new HslColor(
+            HslColor hsl = new(c);
+            HslColor transformed = new(
                 h?.Invoke(hsl.H) ?? hsl.H,
                 s?.Invoke(hsl.S) ?? hsl.S,
                 l?.Invoke(hsl.L) ?? hsl.L);
@@ -288,7 +288,7 @@ namespace GitExtUtils.GitUI.Theming
 
         public static HslColor ToPerceptedHsl(this Color rgb)
         {
-            var hsl = new HslColor(rgb);
+            HslColor hsl = new(rgb);
             return hsl.WithLuminosity(PerceptedL(rgb, hsl.L));
         }
 
@@ -304,7 +304,7 @@ namespace GitExtUtils.GitUI.Theming
         {
             double excludeHTo = 15d; // orange
 
-            var hsl = new HslColor(color);
+            HslColor hsl = new(color);
             var deltaH = ((hsl.H * 360d) - excludeHTo + 180).Modulo(360) - 180;
 
             const double deltaFrom = -140d;
@@ -318,6 +318,30 @@ namespace GitExtUtils.GitUI.Theming
             double correctedDelta = deltaFrom + ((deltaH - deltaFrom) / 2d);
             double correctedH = (excludeHTo + correctedDelta).Modulo(360);
             return new HslColor(correctedH / 360d, hsl.S, hsl.L).ToColor();
+        }
+
+        public static Color Lerp(Color colour, Color to, float amount)
+        {
+            // start colours as lerp-able floats
+            float sr = colour.R, sg = colour.G, sb = colour.B;
+
+            // end colours as lerp-able floats
+            float er = to.R, eg = to.G, eb = to.B;
+
+            // lerp the colours to get the difference
+            byte r = (byte)Lerp(sr, er),
+                g = (byte)Lerp(sg, eg),
+                b = (byte)Lerp(sb, eb);
+
+            // return the new colour
+            return Color.FromArgb(r, g, b);
+
+            float Lerp(float start, float end)
+            {
+                var difference = end - start;
+                var adjusted = difference * amount;
+                return start + adjusted;
+            }
         }
 
         internal static class TestAccessor

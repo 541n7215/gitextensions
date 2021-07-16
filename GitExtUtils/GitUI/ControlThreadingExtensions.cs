@@ -14,27 +14,24 @@ namespace GitUI
 
         static ControlThreadingExtensions()
         {
-            using var cts = new CancellationTokenSource();
+            using CancellationTokenSource cts = new();
             cts.Cancel();
             _preCancelledToken = cts.Token;
 
             _controlDisposed = new ConditionalWeakTable<IComponent, StrongBox<CancellationToken>>();
         }
 
+#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
         public static ControlMainThreadAwaitable SwitchToMainThreadAsync(this ToolStripItem control, CancellationToken cancellationToken = default)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
                 return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken), disposable: null);
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
             }
 
             if (control.IsDisposed)
             {
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
                 return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_preCancelledToken), disposable: null);
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
             }
 
             var disposedCancellationToken = ToolStripItemDisposedCancellationFactory.Instance.GetOrCreateCancellationToken(control);
@@ -45,9 +42,7 @@ namespace GitUI
                 disposedCancellationToken = cancellationTokenSource.Token;
             }
 
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
             var mainThreadAwaiter = ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(disposedCancellationToken);
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
             return new ControlMainThreadAwaitable(mainThreadAwaiter, cancellationTokenSource);
         }
 
@@ -55,16 +50,12 @@ namespace GitUI
         {
             if (cancellationToken.IsCancellationRequested)
             {
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
                 return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken), disposable: null);
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
             }
 
             if (control.IsDisposed)
             {
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
                 return new ControlMainThreadAwaitable(ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_preCancelledToken), disposable: null);
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
             }
 
             var disposedCancellationToken = ControlIsDisposedCancellationFactory.Instance.GetOrCreateCancellationToken(control);
@@ -75,11 +66,10 @@ namespace GitUI
                 disposedCancellationToken = cancellationTokenSource.Token;
             }
 
-#pragma warning disable VSTHRD004 // Await SwitchToMainThreadAsync
             var mainThreadAwaiter = ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(disposedCancellationToken);
-#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
             return new ControlMainThreadAwaitable(mainThreadAwaiter, cancellationTokenSource);
         }
+#pragma warning restore VSTHRD004 // Await SwitchToMainThreadAsync
 
         public readonly struct ControlMainThreadAwaitable
         {
@@ -128,14 +118,14 @@ namespace GitUI
 
         private sealed class ControlIsDisposedCancellationFactory : IsDisposedCancellationFactory<Control>
         {
-            public static readonly ControlIsDisposedCancellationFactory Instance = new ControlIsDisposedCancellationFactory();
+            public static readonly ControlIsDisposedCancellationFactory Instance = new();
 
             protected override bool IsDisposed(Control component) => component.IsDisposed;
         }
 
         private sealed class ToolStripItemDisposedCancellationFactory : IsDisposedCancellationFactory<ToolStripItem>
         {
-            public static readonly ToolStripItemDisposedCancellationFactory Instance = new ToolStripItemDisposedCancellationFactory();
+            public static readonly ToolStripItemDisposedCancellationFactory Instance = new();
 
             protected override bool IsDisposed(ToolStripItem component) => component.IsDisposed;
         }
@@ -154,7 +144,7 @@ namespace GitUI
                         return new StrongBox<CancellationToken>(_preCancelledToken);
                     }
 
-                    var cts = new CancellationTokenSource();
+                    CancellationTokenSource cts = new();
 
                     // Get a copy of the CancellationToken before the source can be disposed. After the source is cancelled
                     // and disposed, the CancellationToken will continue to behave properly, but

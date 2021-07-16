@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using GitCommands;
+using GitUIPluginInterfaces;
 using Microsoft.VisualStudio.Threading;
 
 namespace GitUI
@@ -20,7 +22,7 @@ namespace GitUI
         private readonly ToolStripMenuItem _remoteToolStripMenuItem;
         private GitModule Module => _NO_TRANSLATE_RevisionGrid.Module;
 
-        private static readonly string[] _noResultsFound = { Strings.NoResultsFound };
+        private static readonly string[] _noResultsFound = { TranslatedStrings.NoResultsFound };
 
         public FilterBranchHelper(ToolStripComboBox toolStripBranches, ToolStripDropDownButton toolStripDropDownButton2, RevisionGridControl revisionGrid)
         {
@@ -32,7 +34,7 @@ namespace GitUI
                 Checked = true,
                 CheckOnClick = true,
                 Name = "localToolStripMenuItem",
-                Text = Strings.Local
+                Text = TranslatedStrings.Local
             };
 
             //
@@ -42,7 +44,7 @@ namespace GitUI
             {
                 CheckOnClick = true,
                 Name = "tagToolStripMenuItem",
-                Text = Strings.Tag
+                Text = TranslatedStrings.Tag
             };
 
             //
@@ -53,7 +55,7 @@ namespace GitUI
                 CheckOnClick = true,
                 Name = "remoteToolStripMenuItem",
                 Size = new System.Drawing.Size(115, 22),
-                Text = Strings.Remote
+                Text = TranslatedStrings.Remote
             };
 
             _NO_TRANSLATE_toolStripBranches = toolStripBranches;
@@ -117,42 +119,15 @@ namespace GitUI
             _NO_TRANSLATE_toolStripBranches.Enabled = Module.IsValidGitWorkingDir();
         }
 
-        private List<string> GetBranchHeads(bool local, bool remote)
-        {
-            var list = new List<string>();
-            if (local && remote)
-            {
-                var branches = Module.GetRefs(true, true);
-                list.AddRange(branches.Where(branch => !branch.IsTag).Select(branch => branch.Name));
-            }
-            else if (local)
-            {
-                var branches = Module.GetRefs(false);
-                list.AddRange(branches.Select(branch => branch.Name));
-            }
-            else if (remote)
-            {
-                var branches = Module.GetRefs(true, true);
-                list.AddRange(branches.Where(branch => branch.IsRemote && !branch.IsTag).Select(branch => branch.Name));
-            }
-
-            return list;
-        }
-
-        private IEnumerable<string> GetTagsRefs()
-        {
-            return Module.GetRefs(true, false).Select(tag => tag.Name);
-        }
-
         private List<string> GetBranchAndTagRefs(bool local, bool tag, bool remote)
         {
-            var list = GetBranchHeads(local, remote);
-            if (tag)
-            {
-                list.AddRange(GetTagsRefs());
-            }
+            // Options are interpreted as the refs the search should be limited too
+            // If neither option is selected all refs will be queried also including stash and notes
+            RefsFilter refs = (local ? RefsFilter.Heads : RefsFilter.NoFilter)
+                | (tag ? RefsFilter.Tags : RefsFilter.NoFilter)
+                | (remote ? RefsFilter.Remotes : RefsFilter.NoFilter);
 
-            return list;
+            return Module.GetRefs(refs).Select(branch => branch.Name).ToList();
         }
 
         private void toolStripBranches_TextUpdate(object sender, EventArgs e)
@@ -190,7 +165,7 @@ namespace GitUI
             {
                 string filter = _NO_TRANSLATE_toolStripBranches.Items.Count > 0 ? _NO_TRANSLATE_toolStripBranches.Text : string.Empty;
 
-                if (filter == Strings.NoResultsFound)
+                if (filter == TranslatedStrings.NoResultsFound)
                 {
                     filter = string.Empty;
                 }
@@ -224,7 +199,7 @@ namespace GitUI
             _NO_TRANSLATE_toolStripBranches.SelectionStart = index;
         }
 
-        public void SetBranchFilter(string filter, bool refresh)
+        public void SetBranchFilter(string? filter, bool refresh)
         {
             _NO_TRANSLATE_toolStripBranches.Text = filter;
             ApplyBranchFilter(refresh);

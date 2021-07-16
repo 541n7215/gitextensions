@@ -1,8 +1,4 @@
-﻿using GitCommands;
-using GitCommands.Git;
-using GitUI.UserControls;
-using GitUIPluginInterfaces;
-using JetBrains.Annotations;
+﻿using GitUIPluginInterfaces;
 
 namespace GitUI.CommandsDialogs
 {
@@ -29,7 +25,7 @@ namespace GitUI.CommandsDialogs
     {
         // Defaults are set to simplify test cases, the defaults enables most
         public ContextMenuSelectionInfo(
-            GitRevision selectedRevision,
+            GitRevision? selectedRevision,
             bool isDisplayOnlyDiff,
             bool isStatusOnly,
             int selectedGitItemCount,
@@ -60,8 +56,7 @@ namespace GitUI.CommandsDialogs
             IsAnySubmodule = isAnySubmodule;
         }
 
-        [CanBeNull]
-        public GitRevision SelectedRevision { get; }
+        public GitRevision? SelectedRevision { get; }
         public bool IsDisplayOnlyDiff { get; }
         public bool IsStatusOnly { get; }
         public int SelectedGitItemCount { get; }
@@ -79,13 +74,6 @@ namespace GitUI.CommandsDialogs
 
     public sealed class RevisionDiffController : IRevisionDiffController
     {
-        private readonly IGitRevisionTester _revisionTester;
-
-        public RevisionDiffController(IGitRevisionTester revisionTester)
-        {
-            _revisionTester = revisionTester;
-        }
-
         // The enabling of menu items is related to how the actions have been implemented
 
         public bool ShouldShowDifftoolMenus(ContextMenuSelectionInfo selectionInfo)

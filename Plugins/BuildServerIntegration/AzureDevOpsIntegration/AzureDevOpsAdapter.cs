@@ -12,8 +12,8 @@ using AzureDevOpsIntegration.Settings;
 using GitUI;
 using GitUIPluginInterfaces;
 using GitUIPluginInterfaces.BuildServerIntegration;
+using Microsoft;
 using Microsoft.VisualStudio.Threading;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using ResourceManager;
 
 namespace AzureDevOpsIntegration
@@ -39,34 +39,41 @@ namespace AzureDevOpsIntegration
         public const string PluginName = "Azure DevOps and Team Foundation Server (since TFS2015)";
 
         private bool _firstCallForFinishedBuildsWasIgnored = false;
-        private IBuildServerWatcher _buildServerWatcher;
-        private IntegrationSettings _settings;
-        private ApiClient _apiClient;
+        private IBuildServerWatcher? _buildServerWatcher;
+        private IntegrationSettings? _settings;
+        private ApiClient? _apiClient;
         private static readonly IBuildDurationFormatter _buildDurationFormatter = new BuildDurationFormatter();
-        private JoinableTask<string> _buildDefinitionsTask;
-        private string _projectUrl;
-        private string _buildDefinitions;
+        private JoinableTask<string?>? _buildDefinitionsTask;
+        private string? _projectUrl;
+        private string? _buildDefinitions;
 
         // Static variable used to convey the data between the different instances of the class but that doesn't necessarily require synchronisation because:
         // * there is only one instance at every given time (link to the revision grid and recreated on revision grid refresh)
         // * data is created by the first instance and used in readonly by the later instances
-        private static CacheAzureDevOps CacheAzureDevOps = null;
-        private static string ProjectOnErrorKey = null;
+        private static CacheAzureDevOps? CacheAzureDevOps = null;
+        private static string? ProjectOnErrorKey = null;
 
-        private readonly TranslationString _buildIntegrationErrorCaption = new TranslationString("Azure DevOps error");
-        private readonly TranslationString _badTokenErrorMessage = new TranslationString(@"The personal access token is invalid or has expired. Update it in the 'Build server integration' settings.
+        private readonly TranslationString _buildIntegrationErrorCaption = new("Azure DevOps error");
+        private readonly TranslationString _badTokenErrorMessage = new(@"The personal access token is invalid or has expired. Update it in the 'Build server integration' settings.
 
 The build server integration has been disabled for this session.");
-        private readonly TranslationString _genericErrorMessage = new TranslationString(@"An error occured when requesting build server results.
+        private readonly TranslationString _genericErrorMessage = new(@"An error occured when requesting build server results.
 
 As a consequence, the build server integration has been disabled for this session.
 
 Detail of the error:");
 
-        private Action _openSettings;
-        private string CacheKey => _projectUrl + "|" + _settings.BuildDefinitionFilter;
+        private Action? _openSettings;
+        private string CacheKey
+        {
+            get
+            {
+                Validates.NotNull(_settings);
+                return _projectUrl + "|" + _settings.BuildDefinitionFilter;
+            }
+        }
 
-        public void Initialize(IBuildServerWatcher buildServerWatcher, ISettingsSource config, Action openSettings, Func<ObjectId, bool> isCommitInRevisionGrid = null)
+        public void Initialize(IBuildServerWatcher buildServerWatcher, ISettingsSource config, Action openSettings, Func<ObjectId, bool>? isCommitInRevisionGrid = null)
         {
             if (_buildServerWatcher is not null)
             {
@@ -141,6 +148,8 @@ Detail of the error:");
                 {
                     try
                     {
+                        Validates.NotNull(_buildDefinitionsTask);
+
                         _buildDefinitions = await _buildDefinitionsTask.JoinAsync();
 
                         if (_buildDefinitions is null)
@@ -160,24 +169,22 @@ Detail of the error:");
                         {
                             ProjectOnErrorKey = CacheKey;
 
-                            var btnOpenSettings = new TaskDialogButton("btnOpenSettings", "Open settings");
-                            var btnIgnore = new TaskDialogButton("btnIgnoreError", "Ignore");
-                            using var errorDialog = new TaskDialog
+                            TaskDialogButton btnOpenSettings = new("Open settings");
+                            TaskDialogButton btnIgnore = new("Ignore");
+                            TaskDialogPage page = new()
                             {
-                                InstructionText = errorMessage,
-                                Icon = TaskDialogStandardIcon.Error,
-                                Cancelable = true,
+                                Heading = errorMessage,
+                                Icon = TaskDialogIcon.Error,
+                                AllowCancel = true,
                                 Caption = _buildIntegrationErrorCaption.Text,
-                                Controls = { btnOpenSettings, btnIgnore }
+                                Buttons = { btnOpenSettings, btnIgnore }
                             };
 
-                            btnOpenSettings.Click += (sender, e) => errorDialog.Close(TaskDialogResult.Yes);
-                            btnIgnore.Click += (sender, e) => errorDialog.Close(TaskDialogResult.No);
-
-                            var result = errorDialog.Show();
-                            if (result == TaskDialogResult.Yes)
+                            TaskDialogButton result = TaskDialog.ShowDialog(page);
+                            if (result == btnOpenSettings)
                             {
                                 ProjectOnErrorKey = null;
+                                Validates.NotNull(_openSettings);
                                 _openSettings.Invoke();
                             }
                         }
@@ -273,7 +280,9 @@ Detail of the error:");
                 }
             }
 
-            var buildInfo = new BuildInfo
+            Validates.NotNull(buildDetail.SourceVersion);
+
+            BuildInfo buildInfo = new()
             {
                 Id = buildDetail.BuildNumber,
                 StartDate = buildDetail.StartTime ?? DateTime.MinValue,
@@ -281,28 +290,23 @@ Detail of the error:");
                 Description = duration + " " + buildDetail.BuildNumber,
                 Tooltip = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(buildDetail.IsInProgress ? buildDetail.Status : buildDetail.Result) + Environment.NewLine + duration + Environment.NewLine + buildDetail.BuildNumber,
                 CommitHashList = new[] { ObjectId.Parse(buildDetail.SourceVersion) },
-                Url = buildDetail._links.Web.Href,
+                Url = buildDetail._links?.Web?.Href,
                 ShowInBuildReportTab = false
             };
 
             return buildInfo;
         }
 
-        private static BuildInfo.BuildStatus MapResult(string status)
+        private static BuildInfo.BuildStatus MapResult(string? status)
         {
-            switch (status)
+            return status switch
             {
-                case "failed":
-                    return BuildInfo.BuildStatus.Failure;
-                case "canceled":
-                    return BuildInfo.BuildStatus.Stopped;
-                case "succeeded":
-                    return BuildInfo.BuildStatus.Success;
-                case "partiallySucceeded":
-                    return BuildInfo.BuildStatus.Unstable;
-                default:
-                    return BuildInfo.BuildStatus.Unknown;
-            }
+                "failed" => BuildInfo.BuildStatus.Failure,
+                "canceled" => BuildInfo.BuildStatus.Stopped,
+                "succeeded" => BuildInfo.BuildStatus.Success,
+                "partiallySucceeded" => BuildInfo.BuildStatus.Unstable,
+                _ => BuildInfo.BuildStatus.Unknown
+            };
         }
 
         public void Dispose()
@@ -312,7 +316,7 @@ Detail of the error:");
         }
 
         #region TestAccessor
-        internal TestAccessor GetTestAccessor() => new TestAccessor(this);
+        internal TestAccessor GetTestAccessor() => new(this);
 
         internal readonly struct TestAccessor
         {
@@ -326,6 +330,5 @@ Detail of the error:");
             public IEnumerable<Build> FilterRunningBuilds(IList<Build> runningBuilds) => AzureDevOpsAdapter.FilterRunningBuilds(runningBuilds);
         }
         #endregion
-
     }
 }

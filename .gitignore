@@ -8,12 +8,13 @@ ipch/
 _ReSharper*/
 TestResults/
 *.DS_Store*
+.cr/
 
 obj/
 bin/
 
 #ignore output mild compiler
-GitExtensionsShellEx/Generated/
+src/native/**/Generated/
 
 #ignore some unwanted files
 *.ncb
@@ -63,10 +64,10 @@ UpgradeLog*.htm*
 
 #nuget
 packages/
+.nuget/
 GitExtensions.*.sln.VisualState.xml
 GitExtensions.settings.backup
 /Setup/*.zip
-/Setup/Changelog.md
 *.received.*
 Directory.Build.rsp
 GitStatus.txt
@@ -76,3 +77,4 @@ tree.txt
 artifacts/
 .tools/vswhere/
 .dotnet/
+*.svclog

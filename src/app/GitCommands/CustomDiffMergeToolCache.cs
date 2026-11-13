@@ -1,0 +1,153 @@
+﻿using GitCommands.Config;
+using GitExtensions.Extensibility.Git;
+using Microsoft.VisualStudio.Threading;
+
+namespace GitCommands;
+
+public class CustomDiffMergeToolCache
+{
+    private CustomDiffMergeToolCache(bool isDiff)
+    {
+        _isDiff = isDiff;
+    }
+
+    private readonly bool _isDiff;
+    private readonly SemaphoreSlim _mutex = new(1);
+
+    private IReadOnlyCollection<string>? _tools;
+
+    public static CustomDiffMergeToolCache DiffToolCache { get; } = new(true);
+    public static CustomDiffMergeToolCache MergeToolCache { get; } = new(false);
+
+    /// <summary>
+    /// Clear the existing caches (await current calculation to finsh first)
+    /// </summary>
+    public async Task ClearAsync()
+    {
+        await _mutex.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            _tools = null;
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+    }
+
+    /// <summary>
+    /// Load the available DiffMerge tools and apply to the menus
+    /// </summary>
+    /// <param name="module">The Git module</param>
+    /// <param name="delay">The delay before starting the operation</param>
+    public async Task<IReadOnlyCollection<string>> GetToolsAsync(IGitModule module, int delay, CancellationToken cancellationToken)
+    {
+        if (_tools is not null)
+        {
+            return _tools;
+        }
+
+        // The command will compete with other resources, avoid delaying startup
+        // Do not bother with cancel tokens
+        await Task.Delay(delay, cancellationToken);
+
+        await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            if (_tools is null)
+            {
+                await TaskScheduler.Default;
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string toolKey = _isDiff ? SettingKeyString.DiffToolKey : SettingKeyString.MergeToolKey;
+                string defaultTool = module.GetEffectiveSetting(toolKey);
+                string output = module.GetCustomDiffMergeTools(_isDiff, cancellationToken);
+                _tools = ParseCustomDiffMergeTool(output, defaultTool);
+            }
+        }
+        catch
+        {
+            // No action.
+        }
+        finally
+        {
+            // Parsing has failed, just provide an empty list, no user notification
+            _tools ??= [];
+
+            _mutex.Release();
+        }
+
+        return _tools;
+    }
+
+    /// <summary>
+    /// Parse the output from 'git difftool --tool-help'.
+    /// </summary>
+    /// <param name="output">The output string.</param>
+    /// <returns>The distinct tool names, the default tool first.</returns>
+    private static SortedSet<string> ParseCustomDiffMergeTool(string output, string defaultTool)
+    {
+        SortedSet<string> tools = new(Comparer<string>.Create((x, y) =>
+        {
+            // The default tool first
+            int result = (x != defaultTool).CompareTo(y != defaultTool);
+            if (result == 0)
+            {
+                result = string.Compare(x, y, StringComparison.InvariantCulture);
+            }
+
+            return result != 0 ? result : string.CompareOrdinal(x, y);
+        }));
+
+        // Simple parsing of the textual output opposite to porcelain format
+        // https://github.com/git/git/blob/main/git-mergetool--lib.sh#L298
+        // An alternative is to parse "git config --get-regexp difftool'\..*\.cmd'" and see show_tool_names()
+
+        // The sections to parse in the text has a 'header', then break parsing at first non match
+
+        ReadOnlySpan<char> outputAsSpan = output.AsSpan();
+        Span<Range> splitDestination = stackalloc Range[2];
+        foreach (Range range in outputAsSpan.Split('\n'))
+        {
+            ReadOnlySpan<char> l = outputAsSpan[range];
+            if (l is "The following tools are valid, but not currently available:")
+            {
+                // No more usable tools
+                break;
+            }
+
+            if (!l.StartsWith("\t\t"))
+            {
+                continue;
+            }
+
+            // two tabs, then tool name, cmd (if split in 3) in second
+            // cmd is unreliable for diff and not needed but could be used for mergetool special handling
+            ReadOnlySpan<char> withoutTabs = l[2..];
+            int rangesWritten = withoutTabs.SplitAny(splitDestination, [" ", ".cmd"], StringSplitOptions.RemoveEmptyEntries);
+            if (rangesWritten == 0)
+            {
+                continue;
+            }
+
+            // Ignore (known) tools that must run in a terminal
+            ReadOnlySpan<char> toolNameSpan = withoutTabs[splitDestination[0]];
+            if (toolNameSpan is "vimdiff" or "vimdiff1" or "vimdiff2" or "vimdiff3")
+            {
+                continue;
+            }
+
+            tools.Add(new string(toolNameSpan));
+        }
+
+        return tools;
+    }
+
+    internal static class TestAccessor
+    {
+        public static SortedSet<string> ParseCustomDiffMergeTool(string output, string defaultTool)
+            => CustomDiffMergeToolCache.ParseCustomDiffMergeTool(output, defaultTool);
+    }
+}
